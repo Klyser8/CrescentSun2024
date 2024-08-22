@@ -1,0 +1,9 @@
+name: crystals
+version: '${project.version}'
+main: it.klynet.crystals.Crystals
+api-version: 1.21
+authors: [ Klyser8 ]
+depend:
+  - klynet-core
+  - artifacts
+description: Currency plugin for KlyNet.

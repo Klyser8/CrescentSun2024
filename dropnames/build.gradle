@@ -1,0 +1,26 @@
+version = '1.0.0b'
+description = 'dropnames'
+
+dependencies {
+    compileOnly libs.klynetcore
+    compileOnly libs.artifacts
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components.java)
+        }
+    }
+    repositories {
+        maven {
+            name = "KlyNet"
+            url = uri("http://84.217.92.154:25563/releases")
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+            allowInsecureProtocol=true
+        }
+    }
+}

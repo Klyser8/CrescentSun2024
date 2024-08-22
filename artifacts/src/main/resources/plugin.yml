@@ -1,0 +1,8 @@
+name: artifacts
+version: '${project.version}'
+main: it.klynet.artifacts.Artifacts
+api-version: 1.21
+authors: [ Klyser8 ]
+depend:
+  - klynet-core
+description: Adds items with custom functionalities to the Kly Network

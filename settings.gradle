@@ -1,0 +1,27 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    versionCatalogs {
+        libs {
+            from(files("gradle/libs.version.toml"))
+        }
+        plugins {
+            from(files("gradle/libs.version.toml"))
+        }
+        versions {
+            from(files("gradle/libs.version.toml"))
+        }
+    }
+}
+
+rootProject.name = 'KlyNet'
+include 'klynet-core'
+include 'jumpwarps'
+include 'artifacts'
+include 'crystals'
+include 'dropnames'

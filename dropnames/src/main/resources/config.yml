@@ -1,0 +1,22 @@
+# Legend:
+# - <#rrggbb></#> - Changes the color of the text to the specified color.
+# - <b></b>       - Makes the text bold.
+# - <i></i>       - Makes the text italic.
+# - <u></u>       - Underlines the text.
+# - <s></s>       - Strikes through the text.
+# - <k></k>       - Makes the text obfuscated.
+
+# How drop names are displayed.
+# - %amount% - The amount of the item.
+# - %name%   - The name of the item.
+drop_format: "<@yellow>[%amount%]</@><@white> - </@> %name%"
+
+# Whether to overwrite the display name of the item.
+# If false, item drops will retain their original display name if they have one, including any formatting.
+should_overwrite_display_name: false
+
+# The maximum distance from which a player can see the drop name.
+max_distance: 10
+
+# Whether the drop names should only be visible if the player has direct line of sight to the drop.
+force_line_of_sight: true

@@ -1,0 +1,3 @@
+debugging: true
+# The delay in ticks before a crystal can be picked up by the non-thrower.
+non_owned_crystal_pickup_delay: 100

@@ -1,0 +1,8 @@
+name: jumpwarps
+version: '${project.version}'
+main: it.klynet.jumpwarps.JumpWarps
+api-version: 1.21
+authors: [ Klyser8 ]
+depend:
+  - klynet-core
+description: Allows player to teleport between servers through JumpWarps.

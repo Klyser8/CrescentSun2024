@@ -1,0 +1,9 @@
+db:
+  host: host.net
+  port: 3306
+  db_name: database
+  user: user
+  password: pwd
+  max_pool_size: 5
+auto_save_interval: 4000
+debug_level: 2

@@ -1,0 +1,79 @@
+plugins {
+    id 'java'
+    alias(libs.plugins.java.library)
+    alias(libs.plugins.maven.publish)
+}
+
+group = 'it.klynet'
+version = '1.0-0'
+
+void addRepositories(Project project) {
+    project.repositories {
+        mavenCentral()
+        maven {
+            url = uri('https://repo.papermc.io/repository/maven-public/')
+        }
+
+        maven {
+            url = uri('https://oss.sonatype.org/content/groups/public/')
+        }
+
+        maven {
+            url = uri('https://repo.triumphteam.dev/snapshots/')
+        }
+
+        maven {
+            url = uri('https://repo.maven.apache.org/maven2/')
+        }
+
+        maven {
+            url = uri('http://84.217.92.154:25563/releases')
+            allowInsecureProtocol = true
+        }
+    }
+}
+
+void addPublishing(Project project) {
+    // Avoid if the project is KlyNetCore
+    if (project.name == "KlyNetCore") {
+        return
+    }
+
+    project.extensions.configure(PublishingExtension) { publishing ->
+        publishing.publications { publications ->
+            publications.create("maven", MavenPublication) { publication ->
+                publication.from(project.components.java)
+            }
+        }
+        publishing.repositories { repositories ->
+            repositories.maven { mavenRepo ->
+                mavenRepo.name = "KlyNet"
+                mavenRepo.url = project.uri("http://84.217.92.154:25563/releases")
+                mavenRepo.credentials(PasswordCredentials)
+                mavenRepo.authentication { auth ->
+                    auth.basic(BasicAuthentication)
+                }
+                mavenRepo.allowInsecureProtocol = true
+            }
+        }
+    }
+}
+
+subprojects {
+    apply plugin: 'maven-publish'
+    apply plugin: 'java-library'
+//    addPublishing(project)
+    addRepositories(project)
+    project.group = "it.klynet"
+    (project.extensions["java"] as JavaPluginExtension).sourceCompatibility = JavaVersion.VERSION_21
+    project.tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+    }
+    project.tasks.withType(Javadoc).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    dependencies {
+        compileOnly libs.paper.api
+    }
+}

@@ -1,0 +1,25 @@
+version = '1.1.0'
+description = 'jumpwarps'
+
+dependencies {
+    compileOnly libs.klynetcore
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components.java)
+        }
+    }
+    repositories {
+        maven {
+            name = "KlyNet"
+            url = uri("http://84.217.92.154:25563/releases")
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+            allowInsecureProtocol=true
+        }
+    }
+}

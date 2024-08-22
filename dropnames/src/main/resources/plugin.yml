@@ -1,0 +1,10 @@
+name: dropnames
+version: '${project.version}'
+main: it.klynet.dropnames.DropNames
+api-version: 1.21
+authors:
+  - Klyser8
+depend:
+  - klynet-core
+  - artifacts
+description: Adds names to item drops.

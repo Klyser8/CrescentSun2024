@@ -1,0 +1,65 @@
+plugins {
+    alias(libs.plugins.shadow)
+}
+
+description = "Core plugin for Crescent Sun Network"
+
+dependencies {
+    api libs.hikari.cp
+    api libs.crescentmsg
+    api libs.triumph.cmd
+}
+
+shadowJar {
+    archiveClassifier.set("")
+    relocate 'dev.triumphteam.cmd', 'it.crescentsun.crescentcore.cmd'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId = 'crescent-core'
+            // Use the shadowJar artifact
+            artifact shadowJar.archiveFile.get()
+
+            pom {
+                name.set('crescent-core')
+                description.set('crescent-core with relocated dependencies')
+                url.set('http://84.217.92.154:25563/releases')
+                scm {
+                    connection.set('scm:git:git://84.217.92.154/crescent-core.git')
+                    developerConnection.set('scm:git:ssh://84.217.92.154/crescent-core.git')
+                    url.set('http://84.217.92.154/crescent-core')
+                }
+                licenses {
+                    license {
+                        name.set('The Apache License, Version 2.0')
+                        url.set('http://www.apache.org/licenses/LICENSE-2.0.txt')
+                    }
+                }
+                developers {
+                    developer {
+                        id.set('crescentsun')
+                        name.set('Klyser8')
+                        email.set('tomrom99@gmail.com')
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "KlyNet"
+            url = uri("http://84.217.92.154:25563/releases")
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+            allowInsecureProtocol = true
+        }
+    }
+}
+
+tasks.build {
+    dependsOn shadowJar
+}

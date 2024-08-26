@@ -1,11 +1,20 @@
+import java.nio.charset.StandardCharsets
+
 plugins {
     id 'java'
     alias(libs.plugins.java.library)
     alias(libs.plugins.maven.publish)
 }
 
-group = 'it.klynet'
-version = '1.0-0'
+var author = 'Klyser8'
+var apiVersion = 1.21
+description = "Project for Crescent Sun Network"
+
+def crescentcore_version = "1.1.0d"
+def jumpwarps_version = "1.1.0b"
+def artifacts_version = "1.1.0b"
+def crystals_version = "1.1.0b"
+def dropnames_version = "1.0.0b"
 
 void addRepositories(Project project) {
     project.repositories {
@@ -33,38 +42,28 @@ void addRepositories(Project project) {
     }
 }
 
-void addPublishing(Project project) {
-    // Avoid if the project is KlyNetCore
-    if (project.name == "KlyNetCore") {
-        return
-    }
+void assignVersions(Project project) {
 
-    project.extensions.configure(PublishingExtension) { publishing ->
-        publishing.publications { publications ->
-            publications.create("maven", MavenPublication) { publication ->
-                publication.from(project.components.java)
-            }
-        }
-        publishing.repositories { repositories ->
-            repositories.maven { mavenRepo ->
-                mavenRepo.name = "KlyNet"
-                mavenRepo.url = project.uri("http://84.217.92.154:25563/releases")
-                mavenRepo.credentials(PasswordCredentials)
-                mavenRepo.authentication { auth ->
-                    auth.basic(BasicAuthentication)
-                }
-                mavenRepo.allowInsecureProtocol = true
-            }
-        }
-    }
 }
 
 subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'java-library'
-//    addPublishing(project)
     addRepositories(project)
-    project.group = "it.klynet"
+
+    if (project.name == "crescent-core") {
+        project.version = crescentcore_version
+    } else if (project.name == "jumpwarps") {
+        project.version = jumpwarps_version
+    } else if (project.name == "artifacts") {
+        project.version = artifacts_version
+    } else if (project.name == "crystals") {
+        project.version = crystals_version
+    } else if (project.name == "dropnames") {
+        project.version = dropnames_version
+    }
+
+    project.group = "it.crescentsun"
     (project.extensions["java"] as JavaPluginExtension).sourceCompatibility = JavaVersion.VERSION_21
     project.tasks.withType(JavaCompile).configureEach {
         options.encoding = "UTF-8"
@@ -73,7 +72,65 @@ subprojects {
         options.encoding = 'UTF-8'
     }
 
-    dependencies {
+    project.dependencies {
         compileOnly libs.paper.api
     }
+
+    afterEvaluate {
+        project.tasks.processResources {
+            filteringCharset = StandardCharsets.UTF_8.name()
+            def props = [
+                    "name"       : project.name,
+                    "version"    : project.version,
+                    "description": project.description ?: "No description provided",
+                    "apiVersion" : apiVersion,
+                    "author"     : author
+            ]
+            inputs.properties(props)
+            filesMatching("plugin.yml") {
+                expand(props)
+            }
+        }
+    }
+
+    if (project.name == "crescent-core") {
+        return
+    }
+
+    project.publishing {
+        publications {
+            maven(MavenPublication) {
+                from(components.java)
+            }
+        }
+        repositories {
+            maven {
+                name = "KlyNet"
+                url = uri("http://84.217.92.154:25563/releases")
+                credentials(PasswordCredentials)
+                authentication {
+                    basic(BasicAuthentication)
+                }
+                allowInsecureProtocol = true
+            }
+        }
+    }
+}
+
+tasks.register("buildAll") {
+    group = 'build'
+    description = 'Builds all subprojects'
+    dependsOn(subprojects.collect { it.tasks.named("build") })
+}
+
+tasks.register("publishAll") {
+    group = 'publish'
+    description = 'Publishes all subprojects'
+    dependsOn(subprojects.collect { it.tasks.named("publish") })
+}
+
+tasks.register("copyAllToRemote") {
+    group = 'Custom'
+    description = 'Copies all subprojects to the remote server - without flags.'
+    dependsOn(subprojects.collect { it.tasks.named("copyJarToRemote") })
 }

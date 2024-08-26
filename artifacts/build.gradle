@@ -1,25 +1,6 @@
-version = '1.1.0'
-description = 'artifacts'
+description = 'Custom items plugin for Crescent Sun Network'
 
 dependencies {
-    compileOnly libs.klynetcore
+    compileOnly libs.crescent.core
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from(components.java)
-        }
-    }
-    repositories {
-        maven {
-            name = "KlyNet"
-            url = uri("http://84.217.92.154:25563/releases")
-            credentials(PasswordCredentials)
-            authentication {
-                basic(BasicAuthentication)
-            }
-            allowInsecureProtocol=true
-        }
-    }
-}

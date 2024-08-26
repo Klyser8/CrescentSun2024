@@ -1,10 +1,10 @@
-name: dropnames
-version: '${project.version}'
-main: it.klynet.dropnames.DropNames
-api-version: 1.21
+name: $name
+version: $version
+main: it.crescentsun.dropnames.DropNames
+api-version: $apiVersion
 authors:
-  - Klyser8
+  - $author
+description: $description
 depend:
-  - klynet-core
+  - crescent-core
   - artifacts
-description: Adds names to item drops.

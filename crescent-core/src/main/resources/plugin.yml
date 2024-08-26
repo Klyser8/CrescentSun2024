@@ -1,0 +1,7 @@
+name: $name
+version: $version
+main: it.crescentsun.crescentcore.CrescentCore
+api-version: $apiVersion
+authors:
+  - $author
+description: $description

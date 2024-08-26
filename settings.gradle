@@ -19,8 +19,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'KlyNet'
-include 'klynet-core'
+rootProject.name = 'CrescentSun'
+include 'crescent-core'
 include 'jumpwarps'
 include 'artifacts'
 include 'crystals'

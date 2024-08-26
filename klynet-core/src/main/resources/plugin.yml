@@ -1,6 +1,0 @@
-name: klynet-core
-version: '${project.version}'
-main: it.klynet.klynetcore.KlyNetCore
-api-version: 1.21
-authors: [ Klyser8 ]
-description: Core plugin for the Kly Network.

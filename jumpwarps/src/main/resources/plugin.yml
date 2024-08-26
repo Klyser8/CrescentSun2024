@@ -1,8 +1,9 @@
-name: jumpwarps
-version: '${project.version}'
-main: it.klynet.jumpwarps.JumpWarps
-api-version: 1.21
-authors: [ Klyser8 ]
+name: $name
+version: $version
+main: it.crescentsun.jumpwarps.JumpWarps
+api-version: $apiVersion
+authors:
+  - $author
+description: $description
 depend:
-  - klynet-core
-description: Allows player to teleport between servers through JumpWarps.
+  - crescent-core

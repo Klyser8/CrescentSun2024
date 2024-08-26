@@ -1,8 +1,9 @@
-name: artifacts
-version: '${project.version}'
-main: it.klynet.artifacts.Artifacts
-api-version: 1.21
-authors: [ Klyser8 ]
+name: $name
+version: $version
+main: it.crescentsun.artifacts.Artifacts
+api-version: $apiVersion
+authors:
+  - $author
+description: $description
 depend:
-  - klynet-core
-description: Adds items with custom functionalities to the Kly Network
+  - crescent-core

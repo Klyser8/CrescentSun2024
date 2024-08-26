@@ -1,31 +1,29 @@
 [versions]
 # Core
-minecraft = "1.21.1"
 paper-api = "1.21.1-R0.1-SNAPSHOT"
-java = "21"
 
-# KlyNet plugins
-klynet-core = "1.1.0a"
-jumpwarps = "1.1.0"
-artifacts = "1.1.0"
-crystals = "1.1.0"
-dropnames = "1.0.0"
+# Crescent Sun plugins
+crescent-core = "1.1.0d"
+jumpwarps = "1.1.0b"
+artifacts = "1.1.0b"
+crystals = "1.1.0b"
+dropnames = "1.0.0b"
 
 # Other dependencies
 triumph-cmd = "2.0.0-SNAPSHOT"
 hikari-cp = "5.1.0"
-adventurousklynetmsg = "1.0.1d"
+crescentmsg = "1.0.1e"
 
 [libraries]
 # Core
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api"}
 triumph-cmd = { module = "dev.triumphteam:triumph-cmd-bukkit", version.ref = "triumph-cmd"}
 hikari-cp = { module = "com.zaxxer:HikariCP", version.ref = "hikari-cp"}
-adventurousklynetmsg = { module = "it.klynet:adventurousklynetmsg", version.ref = "adventurousklynetmsg"}
+crescentmsg = { module = "it.crescentsun:crescentmsg", version.ref = "crescentmsg"}
 
-# KlyNet plugins
-klynetcore = { module = "it.klynet:klynet-core", version.ref = "klynet-core"}
-artifacts = { module = "it.klynet:artifacts", version.ref = "artifacts"}
+# Crescent Sun plugins
+crescent-core = { module = "it.crescentsun:crescent-core", version.ref = "crescent-core"}
+artifacts = { module = "it.crescentsun:artifacts", version.ref = "artifacts"}
 
 [plugins]
 java-library = { id = "java-library"}

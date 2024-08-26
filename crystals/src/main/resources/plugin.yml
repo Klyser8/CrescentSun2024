@@ -1,9 +1,10 @@
-name: crystals
-version: '${project.version}'
-main: it.klynet.crystals.Crystals
-api-version: 1.21
-authors: [ Klyser8 ]
+name: $name
+version: $version
+main: it.crescentsun.crystals.Crystals
+api-version: $apiVersion
+authors:
+  - $author
+description: $description
 depend:
-  - klynet-core
+  - crescent-core
   - artifacts
-description: Currency plugin for KlyNet.

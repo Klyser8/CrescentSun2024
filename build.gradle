@@ -10,11 +10,11 @@ var author = 'Klyser8'
 var apiVersion = 1.21
 description = "Project for Crescent Sun Network"
 
-def crescentcore_version = "1.1.0d"
+def crescentcore_version = "1.1.0e"
 def jumpwarps_version = "1.1.0b"
 def artifacts_version = "1.1.0b"
 def crystals_version = "1.1.0b"
-def dropnames_version = "1.0.0b"
+def dropnames_version = "1.1.0b"
 
 void addRepositories(Project project) {
     project.repositories {
@@ -36,14 +36,9 @@ void addRepositories(Project project) {
         }
 
         maven {
-            url = uri('http://84.217.92.154:25563/releases')
-            allowInsecureProtocol = true
+            url = uri('https://crescentsun.it/reposilite/releases')
         }
     }
-}
-
-void assignVersions(Project project) {
-
 }
 
 subprojects {
@@ -93,6 +88,16 @@ subprojects {
         }
     }
 
+    tasks.register("buildAndCopyToRemote") {
+        group = 'Custom'
+        description = 'Builds the project, publishes it, and copies the resulting JAR to a specified directory on the crescent sun server.'
+        dependsOn 'build', 'copyJarToRemote'
+    }
+
+    tasks.build.group = 'always-used'
+    tasks.publish.group = 'always-used'
+    tasks.copyJarToRemote.group = 'always-used'
+
     if (project.name == "crescent-core") {
         return
     }
@@ -105,32 +110,31 @@ subprojects {
         }
         repositories {
             maven {
-                name = "KlyNet"
-                url = uri("http://84.217.92.154:25563/releases")
+                name = "CrescentSun"
+                url = uri("https://crescentsun.it/reposilite/releases")
                 credentials(PasswordCredentials)
                 authentication {
                     basic(BasicAuthentication)
                 }
-                allowInsecureProtocol = true
             }
         }
     }
 }
 
 tasks.register("buildAll") {
-    group = 'build'
+    group = 'always-used'
     description = 'Builds all subprojects'
     dependsOn(subprojects.collect { it.tasks.named("build") })
 }
 
 tasks.register("publishAll") {
-    group = 'publish'
+    group = 'always-used'
     description = 'Publishes all subprojects'
     dependsOn(subprojects.collect { it.tasks.named("publish") })
 }
 
 tasks.register("copyAllToRemote") {
-    group = 'Custom'
+    group = 'always-used'
     description = 'Copies all subprojects to the remote server - without flags.'
     dependsOn(subprojects.collect { it.tasks.named("copyJarToRemote") })
 }

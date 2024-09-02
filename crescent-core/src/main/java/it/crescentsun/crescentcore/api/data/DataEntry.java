@@ -1,13 +1,16 @@
-package it.crescentsun.crescentcore.plugindata;
+package it.crescentsun.crescentcore.api.data;
+
+import it.crescentsun.crescentcore.api.data.player.PlayerDataRegistry;
+import org.jetbrains.annotations.ApiStatus;
 
 /**
  * This class is used to store additional data of any type.
- * See {@link PluginDataRegistry} for more information.
+ * See {@link PlayerDataRegistry} for more information.
  * @param <V>
  */
-public class PluginData<V> {
+public class DataEntry<V> {
     private V value;
-    private DataType type;
+    private final DataType type;
 
     /**
      * Constructor for AdditionalData.
@@ -15,7 +18,8 @@ public class PluginData<V> {
      * @param type The type of the data ({@link DataType})
      * @param value The value to store
      */
-    protected PluginData(DataType type, V value) {
+    @ApiStatus.Internal
+    public DataEntry(DataType type, V value) {
         this.type = type;
         this.value = value;
     }
@@ -27,7 +31,7 @@ public class PluginData<V> {
      *
      * @param original The original AdditionalData to copy
      */
-    public PluginData(PluginData<V> original) {
+    public DataEntry(DataEntry<V> original) {
         this.type = original.type;
         this.value = original.value; // Direct copy, assumes V is immutable or you're okay with shared references
     }
@@ -61,7 +65,7 @@ public class PluginData<V> {
 
     @Override
     public String toString() {
-        return "PluginData{" +
+        return "PlayerDataEntry{" +
                 "value=" + value +
                 ", type=" + type +
                 '}';

@@ -1,7 +1,9 @@
-package it.crescentsun.crescentcore.plugindata;
+package it.crescentsun.crescentcore.api.data.player;
 
 import com.google.common.collect.ImmutableMap;
 import it.crescentsun.crescentcore.CrescentCore;
+import it.crescentsun.crescentcore.api.data.DataType;
+import it.crescentsun.crescentcore.api.data.DataEntry;
 import org.bukkit.NamespacedKey;
 
 import java.util.HashMap;
@@ -13,11 +15,11 @@ import java.util.Map;
  * method in your onEnable method for each piece of data you want to store.
  * Once all plugins in the server have been enabled, the registry will be frozen and cannot be modified further.
  */
-public final class PluginDataRegistry {
+public final class PlayerDataRegistry {
 
-    public PluginDataRegistry() {}
+    public PlayerDataRegistry() {}
     private static boolean isFrozen = false;
-    private final Map<NamespacedKey, PluginData<?>> pluginDataRegistry = new HashMap<>();
+    private final Map<NamespacedKey, DataEntry<?>> playerDataRegistry = new HashMap<>();
 
     /**
      * Registers additional data to be stored in the PlayerData class, with a default value.
@@ -28,36 +30,36 @@ public final class PluginDataRegistry {
      * @param defaultValue The default value to use if the data is not present
      * @param <V> The type of the data
      */
-    public <V> void registerPluginData(NamespacedKey namespacedKey, DataType type, V defaultValue) {
+    public <V> void registerPlayerDataEntry(NamespacedKey namespacedKey, DataType type, V defaultValue) {
         if (isFrozen) {
-            throw new UnsupportedOperationException("The additional data registry is frozen and cannot be modified.");
+            throw new UnsupportedOperationException("The player data registry is frozen and cannot be modified.");
         }
         if (!type.getTypeClass().isInstance(defaultValue)) {
-            throw new IllegalArgumentException("The default value for plugin data " + namespacedKey +
+            throw new IllegalArgumentException("The default value for player data " + namespacedKey +
                     " does not match the type" + type + "!");
         }
-        PluginData<V> data = new PluginData<>(type, defaultValue);
-        pluginDataRegistry.put(namespacedKey, data);
-        CrescentCore.getInstance().getLogger().info("Plugin data registered: " + namespacedKey);
+        DataEntry<V> data = new DataEntry<>(type, defaultValue);
+        playerDataRegistry.put(namespacedKey, data);
+        CrescentCore.getInstance().getLogger().info("Player data entry registered: " + namespacedKey);
     }
 
     /**
-     * Returns an immutable version of the plugin data registry.
-     * @return an immutable version of the plugin data registry.
+     * Returns an immutable version of the player data registry.
+     * @return an immutable version of the player data registry.
      */
-    public Map<NamespacedKey, PluginData<?>> getPluginDataRegistry() {
-        return ImmutableMap.copyOf(pluginDataRegistry);
+    public Map<NamespacedKey, DataEntry<?>> getPlayerDataRegistry() {
+        return ImmutableMap.copyOf(playerDataRegistry);
     }
 
     /**
      * Returns a deep copy of the additional data registry.
      * @return A deep copy of the additional data registry
      */
-    public Map<NamespacedKey, PluginData<?>> clonePluginDataRegistry() {
-        Map<NamespacedKey, PluginData<?>> additionalDataMap = new HashMap<>();
-        for (NamespacedKey key : pluginDataRegistry.keySet()) {
+    public Map<NamespacedKey, DataEntry<?>> clonePlayerDataEntryRegistry() {
+        Map<NamespacedKey, DataEntry<?>> additionalDataMap = new HashMap<>();
+        for (NamespacedKey key : playerDataRegistry.keySet()) {
             NamespacedKey newKey = new NamespacedKey(key.namespace(), key.value());
-            PluginData<?> newData = new PluginData<>(pluginDataRegistry.get(key));
+            DataEntry<?> newData = new DataEntry<>(playerDataRegistry.get(key));
             additionalDataMap.put(newKey, newData); // Use the copy constructor
         }
         return additionalDataMap;
@@ -68,8 +70,8 @@ public final class PluginDataRegistry {
      */
     public static void freezeRegistries() {
         isFrozen = true;
-        CrescentCore.getInstance().getLogger().info("Additional Data Registry frozen! " +
-                "No more additional data can be registered.");
+        CrescentCore.getInstance().getLogger().info("Player Data Registry frozen! " +
+                "No more player data can be registered.");
     }
 
     /**
@@ -78,11 +80,11 @@ public final class PluginDataRegistry {
      * @param namespace The namespace of the plugin
      * @return A list of additional data registered by the plugin
      */
-    public Map<NamespacedKey, PluginData<?>> getPluginDataForNamespace(String namespace) {
-        Map<NamespacedKey, PluginData<?>> data = new HashMap<>();
-        for (NamespacedKey namespacedKey : pluginDataRegistry.keySet()) {
+    public Map<NamespacedKey, DataEntry<?>> getPlayerDataEntryForNamespace(String namespace) {
+        Map<NamespacedKey, DataEntry<?>> data = new HashMap<>();
+        for (NamespacedKey namespacedKey : playerDataRegistry.keySet()) {
             if (namespacedKey.namespace().equalsIgnoreCase(namespace)) {
-                data.put(namespacedKey, pluginDataRegistry.get(namespacedKey));
+                data.put(namespacedKey, playerDataRegistry.get(namespacedKey));
             }
         }
         return data;

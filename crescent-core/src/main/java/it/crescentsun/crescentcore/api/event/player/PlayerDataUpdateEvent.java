@@ -1,7 +1,7 @@
 package it.crescentsun.crescentcore.api.event.player;
 
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
-import it.crescentsun.crescentcore.plugindata.PluginData;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.data.DataEntry;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
@@ -9,7 +9,7 @@ import org.bukkit.event.player.PlayerEvent;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Event called when any {@link PluginData} pertaining to a player is updated.
+ * Event called when any {@link DataEntry} pertaining to a player is updated.
  * You can use this event to cancel the update, or change the value that is being set.
  * IMPORTANT: if you want to change the value, you must ensure that the new value is of the same type as the old value.
  */

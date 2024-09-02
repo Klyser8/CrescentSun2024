@@ -3,7 +3,7 @@
 paper-api = "1.21.1-R0.1-SNAPSHOT"
 
 # Crescent Sun plugins
-crescent-core = "1.1.0d"
+crescent-core = "1.1.0e"
 jumpwarps = "1.1.0b"
 artifacts = "1.1.0b"
 crystals = "1.1.0b"
@@ -12,7 +12,7 @@ dropnames = "1.0.0b"
 # Other dependencies
 triumph-cmd = "2.0.0-SNAPSHOT"
 hikari-cp = "5.1.0"
-crescentmsg = "1.0.1e"
+crescentmsg = "1.1.0j"
 
 [libraries]
 # Core

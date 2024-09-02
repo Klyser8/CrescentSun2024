@@ -1,4 +1,4 @@
-package it.crescentsun.crescentcore.core.data;
+package it.crescentsun.crescentcore.core.db;
 
 import it.crescentsun.crescentcore.CrescentCore;
 

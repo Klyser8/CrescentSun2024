@@ -1,6 +1,6 @@
 package it.crescentsun.crescentcore.api.event.player;
 
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;

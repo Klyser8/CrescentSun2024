@@ -1,10 +1,10 @@
-package it.crescentsun.crescentcore.plugindata;
+package it.crescentsun.crescentcore.api.data;
 
 import java.sql.Timestamp;
 
 /**
- * Enum for the different data types that can be registered through the PluginDataRegistry.
- * It is also used to create SQL tables for plugin data.
+ * Enum for the different data types that can be registered through the PlayerDataEntryRegistry.
+ * It is also used to create SQL tables for player and plugin data.
  */
 public enum DataType {
 
@@ -19,7 +19,9 @@ public enum DataType {
     NULLABLE_VARCHAR_36(String.class, "VARCHAR(36)"),
     VARCHAR_255(String.class, "VARCHAR(255) NOT NULL"),
     NULLABLE_VARCHAR_255(String.class, "VARCHAR(255)"),
-    TIMESTAMP(Timestamp.class, "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
+    TIMESTAMP(Timestamp.class, "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"),
+
+    AUTO_INCREMENT_INT(Integer.class, "INT NOT NULL AUTO_INCREMENT"); //Should never be used as an actual data type
 
     private final Class<?> clazz;
     private final String sqlType;

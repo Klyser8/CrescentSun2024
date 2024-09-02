@@ -1,6 +1,8 @@
 package it.crescentsun.crescentcore.api;
 
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.CrescentCore;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -11,7 +13,7 @@ import java.io.DataOutputStream;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class BungeeUtils {
+public class BungeeUtils  {
 
     /**
      * Saves the player's data to the database, removes the data from the plugin's hashmap,
@@ -27,12 +29,12 @@ public class BungeeUtils {
     public static CompletableFuture<Boolean> saveDataAndSendPlayerToServer(
             CrescentCore crescentCore, JavaPlugin sendingPlugin, Player player, String server) {
         UUID uuid = player.getUniqueId();
-        CompletableFuture<PlayerData> playerDataFut = crescentCore.getPlayerManager().asyncSaveData(uuid);
+        CompletableFuture<PlayerData> playerDataFut = crescentCore.getPlayerDataManager().asyncSaveData(uuid);
         return playerDataFut.thenApplyAsync(playerData -> {
             if (playerData == null) {
                 return false;
             }
-            crescentCore.getPlayerManager().removeData(uuid);
+            crescentCore.getPlayerDataManager().removeData(uuid);
             try {
                 ByteArrayOutputStream b = new ByteArrayOutputStream();
                 DataOutputStream out = new DataOutputStream(b);
@@ -50,4 +52,14 @@ public class BungeeUtils {
         });
     }
 
+    /**
+     * Sends a message to the BungeeCord server to get the name of the server the player is on.
+     *
+     * @param player The player to get the server name from.
+     */
+    public static void sendGetServerMessage(Player player) {
+        ByteArrayDataOutput out = ByteStreams.newDataOutput();
+        out.writeUTF("GetServer");
+        player.sendPluginMessage(CrescentCore.getInstance(), "BungeeCord", out.toByteArray());
+    }
 }

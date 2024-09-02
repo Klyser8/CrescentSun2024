@@ -2,14 +2,13 @@ package it.crescentsun.crescentcore.core.command;
 
 import it.crescentsun.crescentcore.CrescentCore;
 import it.crescentsun.crescentcore.api.BungeeUtils;
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import dev.triumphteam.cmd.bukkit.annotation.Permission;
 import dev.triumphteam.cmd.core.BaseCommand;
 import dev.triumphteam.cmd.core.annotation.Command;
 import dev.triumphteam.cmd.core.annotation.Default;
 import dev.triumphteam.cmd.core.annotation.SubCommand;
-import it.crescentsun.crescentmsg.MessageFormatter;
-import it.crescentsun.crescentmsg.MessageType;
+import it.crescentsun.crescentcore.core.lang.CrescentCoreLocalization;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;
@@ -19,7 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-@SuppressWarnings("ALL")
+//@SuppressWarnings("ALL")
 @Command(value = "crescent", alias = "cs")
 public class CrescentCoreCommands extends BaseCommand {
 
@@ -32,49 +31,53 @@ public class CrescentCoreCommands extends BaseCommand {
     @Default
     @Permission("crescent.crescentcore")
     public void defaultCommand(final CommandSender sender) {
-        TextComponent text = MessageFormatter.formatCommandMessage(
-                MessageType.INFO, Component.text("Type \"/crescent help\" for help."), "/crescent help");
-        sender.sendMessage(text);
+        if (sender instanceof Player player) {
+            sender.sendMessage(CrescentCoreLocalization.GENERIC_INCORRECT_COMMAND.getFormattedMessage(player.locale(), "/crescent help"));
+        } else {
+            sender.sendMessage(CrescentCoreLocalization.GENERIC_INCORRECT_COMMAND.getFormattedMessage(null, "/crescent help"));
+        }
     }
 
     @SubCommand("switch")
     @Permission("crescent.crescentcore.switch")
     public void switchCommand(final CommandSender sender, String serverName) {
         if (!(sender instanceof Player player)) {
-            TextComponent text = MessageFormatter.formatCommandMessage(
-                    MessageType.INCORRECT, Component.text("Only players can use this command."));
-            sender.sendMessage(text);
+            sender.sendMessage(CrescentCoreLocalization.GENERIC_CONSOLE_INVALID.getFormattedMessage(null));
             return;
         }
         if (serverName == null || serverName.isEmpty()) {
-            TextComponent text = MessageFormatter.formatCommandMessage(
-                    MessageType.INCORRECT, Component.text("You must specify a server name."));
-            sender.sendMessage(text);
+            sender.sendMessage(CrescentCoreLocalization.GENERIC_SPECIFY_SERVER_NAME.getFormattedMessage(player.locale()));
             return;
         }
-        CompletableFuture<Boolean> boolFut = BungeeUtils.saveDataAndSendPlayerToServer(
+        BungeeUtils.saveDataAndSendPlayerToServer(
                 plugin, plugin, player, serverName);
-        TextComponent text = MessageFormatter.formatCommandMessage(
-                MessageType.INFO, Component.text("You will be teleported once your data is saved. Please wait..."));
-        sender.sendMessage(text);
+        sender.sendMessage(CrescentCoreLocalization.GENERIC_AWAIT_TELEPORTATION.getFormattedMessage(player.locale(), serverName));
     }
 
     @SubCommand("save")
     @Permission("crescent.crescentcore.save")
     public void saveCommand(final CommandSender sender) {
-        sender.sendMessage(MessageFormatter.formatCommandMessage(
-                MessageType.INFO, Component.text("Saving all plugin data...")));
-        CompletableFuture<Map<UUID, PlayerData>> futureSaveMap = plugin.getPlayerManager().asyncSaveAllData();
-        futureSaveMap.thenAccept(saveMap -> {
+        sender.sendMessage(CrescentCoreLocalization.SAVING_PLAYER_DATA.getFormattedMessage(null));
+        plugin.getPluginDataManager().saveAllData();
+        CompletableFuture<Map<UUID, PlayerData>> futurePlayerMap = plugin.getPlayerDataManager().asyncSaveAllData();
+        futurePlayerMap.thenAccept(saveMap -> {
+            TextComponent text;
             if (!saveMap.isEmpty()) {
-                TextComponent text = MessageFormatter.formatCommandMessage(
-                        MessageType.SUCCESS, Component.text("All plugin data has been saved!"));
-                sender.sendMessage(text);
+                text = (TextComponent) CrescentCoreLocalization.SAVING_PLAYER_DATA_SUCCESS.getFormattedMessage(null);
             } else {
-                TextComponent text = MessageFormatter.formatCommandMessage(
-                        MessageType.ERROR, Component.text("Data could not be saved - Something's wrong."));
-                sender.sendMessage(text);
+                text = (TextComponent) CrescentCoreLocalization.SAVING_PLAYER_DATA_FAILURE.getFormattedMessage(null);
             }
+            sender.sendMessage(text);
+        });
+        CompletableFuture<Boolean> futurePluginMap = plugin.getPluginDataManager().asyncSaveAllData();
+        futurePluginMap.thenAccept(success -> {
+            TextComponent text;
+            if (success) {
+                text = Component.text("Success!");
+            } else {
+                text = Component.text("Fail");
+            }
+            sender.sendMessage(text);
         });
     }
 }

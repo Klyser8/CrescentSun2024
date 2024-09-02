@@ -1,14 +1,17 @@
 package it.crescentsun.crescentcore.core.listener;
 
-import it.crescentsun.crescentmsg.MessageFormatter;
+import com.destroystokyo.paper.event.player.PlayerJumpEvent;
+import it.crescentsun.crescentcore.api.BungeeUtils;
 import it.crescentsun.crescentcore.CrescentCore;
-import it.crescentsun.crescentcore.api.event.crystals.GenerateCrystalsEvent;
+import it.crescentsun.crescentcore.api.data.plugin.PluginDataRegistry;
 import it.crescentsun.crescentcore.api.event.server.ServerLoadPostDBSetupEvent;
-import it.crescentsun.crescentcore.plugindata.PluginDataRegistry;
+import it.crescentsun.crescentcore.api.data.player.PlayerDataRegistry;
 import it.crescentsun.crescentcore.api.event.player.PlayerJoinEventPostDBLoad;
 import it.crescentsun.crescentcore.api.event.player.PlayerQuitEventPostDBSave;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
 import io.papermc.paper.event.player.AsyncChatEvent;
+import it.crescentsun.crescentcore.core.data.JumpWarp;
+import it.crescentsun.crescentmsg.api.MessageFormatter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Bukkit;
@@ -18,13 +21,16 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRegisterChannelEvent;
 import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.sql.Timestamp;
-import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+
+import static it.crescentsun.crescentcore.CrescentCore.PLUGIN_DATA_REGISTRY;
 
 public class CrescentCoreListener implements Listener {
 
@@ -36,18 +42,16 @@ public class CrescentCoreListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        crescentCore.getLogger().info("Player joined the server. Port is: " + Bukkit.getServer().getPort()); //Change accordingly
         Player player = event.getPlayer();
         event.joinMessage(null);
         int port = Bukkit.getServer().getPort();
-        if (String.valueOf(port).startsWith("9")) {
+        if (String.valueOf(port).equals("25564")) {
             Bukkit.getScheduler().runTaskLater(crescentCore, () -> {
                 player.sendMessage(MessageFormatter.parse(
                         "<@yellow><b>You are currently on the test server.</b> Please report any bugs you encounter to the staff.</@>"));
             }, 20);
         }
-        crescentCore.getPlayerManager().asyncLoadData(player.getUniqueId()).thenAcceptAsync(pData -> {
-            System.out.println("Player data: " + pData);
+        crescentCore.getPlayerDataManager().asyncLoadData(player.getUniqueId()).thenAcceptAsync(pData -> {
             if (pData == null) {
                 return;
             }
@@ -56,28 +60,29 @@ public class CrescentCoreListener implements Listener {
                 Bukkit.getPluginManager().callEvent(dataLoadedEvent);
                 return null;
             });
-            boolean isServerLobby = port == CrescentCore.LIVE_LOBBY_PORT ||
-                    crescentCore.getServer().getPort() == CrescentCore.TEST_LOBBY_PORT;
-            if (isServerLobby) {
-                Timestamp firstLogin = pData.getData(CrescentNamespaceKeys.PLAYER_FIRST_LOGIN);
-                Timestamp lastSeen = pData.getData(CrescentNamespaceKeys.PLAYER_LAST_SEEN);
-                if (firstLogin.equals(lastSeen)) {
-                    Bukkit.broadcast(MessageFormatter.parse(
-                            "<@green><b>Welcome to the server,</@> <@aqua>" + player.getName() + "</@>!</b>"));
-                } else {
-                    Bukkit.broadcast(MessageFormatter.parse(
-                            "<@yellow>Welcome back,</@> <@white>" + player.getName() + "</@>!"));
-                }
+            // Check if the server is a lobby server
+            Timestamp firstLogin = pData.getDataValue(CrescentNamespaceKeys.PLAYER_FIRST_LOGIN);
+            Timestamp lastSeen = pData.getDataValue(CrescentNamespaceKeys.PLAYER_LAST_SEEN);
+            if (firstLogin.equals(lastSeen)) {
+                Bukkit.broadcast(MessageFormatter.parse(
+                        "<@green><b>Welcome to the Crescent Sun Network,</@> <@aqua>" + player.getName() + "</@>!</b>"));
             }
         });
-        if (port == CrescentCore.LIVE_LOBBY_PORT || port == CrescentCore.TEST_LOBBY_PORT) {
+        /*if (isServerLobby) {
             player.teleport(Objects.requireNonNull(Bukkit.getWorld("world")).getSpawnLocation());
             for (PotionEffect effect : player.getActivePotionEffects()) {
                 player.removePotionEffect(effect.getType());
             }
-        }
+        }*/
         player.addPotionEffect(new PotionEffect(
                 PotionEffectType.BLINDNESS, 50, 0, false, false));
+    }
+
+    @EventHandler
+    public void onPlayerRegisterChannelEvent(PlayerRegisterChannelEvent event) {
+        if (event.getChannel().equals("BungeeCord")) {
+            BungeeUtils.sendGetServerMessage(event.getPlayer());
+        }
     }
 
     /**
@@ -87,12 +92,12 @@ public class CrescentCoreListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (crescentCore.getPlayerManager().getData(player.getUniqueId()) == null) {
+        if (crescentCore.getPlayerDataManager().getData(player.getUniqueId()) == null) {
             return;
         }
-        crescentCore.getPlayerManager().getData(player.getUniqueId())
-                .updateData(CrescentNamespaceKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
-        crescentCore.getPlayerManager().asyncSaveData(player.getUniqueId()).thenAcceptAsync(playerData -> {
+        crescentCore.getPlayerDataManager().getData(player.getUniqueId())
+                .updateDataValue(CrescentNamespaceKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
+        crescentCore.getPlayerDataManager().asyncSaveData(player.getUniqueId()).thenAcceptAsync(playerData -> {
             if (playerData == null) {
                 return;
             }
@@ -101,18 +106,20 @@ public class CrescentCoreListener implements Listener {
                 Bukkit.getPluginManager().callEvent(dataSavedEvent);
                 return null;
             });
-            crescentCore.getPlayerManager().removeData(player.getUniqueId());
+            crescentCore.getPlayerDataManager().removeData(player.getUniqueId());
         });
     }
 
     @EventHandler
     public void onServerLoad(ServerLoadEvent event) {
+        PlayerDataRegistry.freezeRegistries();
         PluginDataRegistry.freezeRegistries();
-        crescentCore.getDatabaseManager().initServerDataManager();
         crescentCore.getDatabaseManager().initTables();
+        crescentCore.getDatabaseManager().initPluginDataManager();
         crescentCore.getDatabaseManager().initPlayerDataManager();
+        crescentCore.getPluginDataManager().loadAllData();
         if (!Bukkit.getOnlinePlayers().isEmpty()) {
-            CompletableFuture<Boolean> future = crescentCore.getPlayerManager().loadAllData();
+            CompletableFuture<Boolean> future = crescentCore.getPlayerDataManager().loadAllData();
             future.thenAccept(success -> {
                 if (success) {
                     ServerLoadPostDBSetupEvent dbSetupEvent = new ServerLoadPostDBSetupEvent();
@@ -123,8 +130,26 @@ public class CrescentCoreListener implements Listener {
                 }
             });
         }
-        crescentCore.getDatabaseManager().getServerDataManager()
-                .setLastLaunch(new Timestamp(System.currentTimeMillis()));
+    }
+
+    @EventHandler
+    public void onPlayerJump(PlayerJumpEvent event) {
+        JumpWarp jumpWarp = new JumpWarp(
+                PLUGIN_DATA_REGISTRY.getDataRepository().getAllData(JumpWarp.class).size() + 1,
+                event.getPlayer() + String.valueOf(crescentCore.getRandom().nextInt(20000)),
+                event.getPlayer().getClientBrandName() + crescentCore.getRandom().nextInt(20000),
+                UUID.randomUUID(),
+                event.getPlayer().getLocation().getBlockX(),
+                event.getPlayer().getLocation().getBlockY(),
+                event.getPlayer().getLocation().getBlockZ(),
+                event.getPlayer().locale().getCountry() + crescentCore.getRandom().nextInt(20000),
+                UUID.randomUUID(),
+                -event.getPlayer().getLocation().getBlockX(),
+                -event.getPlayer().getLocation().getBlockY(),
+                -event.getPlayer().getLocation().getBlockZ()
+        );
+
+        PLUGIN_DATA_REGISTRY.getDataRepository().addData(JumpWarp.class, jumpWarp.getId(), jumpWarp);
     }
 
     @EventHandler
@@ -140,15 +165,6 @@ public class CrescentCoreListener implements Listener {
             return;
         }
         event.message(parsedComponent);
-    }
-
-    @EventHandler
-    public void onCrystalSpawn(GenerateCrystalsEvent event) {
-        int amount = event.getAmount();
-        System.out.println("Amount: " + amount);
-        System.out.println("Generation reason: " + event.getGenerationSource());
-        System.out.println("Player: " + event.getPlayer());
-        crescentCore.getDatabaseManager().getServerDataManager().incrementCrystalsGenerated(amount);
     }
 
 }

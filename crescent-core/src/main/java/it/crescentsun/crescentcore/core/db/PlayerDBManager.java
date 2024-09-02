@@ -1,10 +1,9 @@
-package it.crescentsun.crescentcore.core.data.player;
+package it.crescentsun.crescentcore.core.db;
 
-import it.crescentsun.crescentcore.core.data.AbstractDataManager;
-import it.crescentsun.crescentcore.core.data.DatabaseManager;
 import it.crescentsun.crescentcore.CrescentCore;
-import it.crescentsun.crescentcore.plugindata.PluginData;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.data.DataEntry;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -14,15 +13,14 @@ import java.sql.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-import static it.crescentsun.crescentcore.CrescentCore.PLAYER_DATA_REGISTRY;
+import static it.crescentsun.crescentcore.CrescentCore.PLAYER_DATA_ENTRY_REGISTRY;
 
 /**
  * Manages player data, including loading, saving, updating, and creating default data.
  */
-public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
-    private final Map<String, String> INSERT_OR_UPDATE_PLUGIN_DATA_QUERIES = new HashMap<>();
-    private final Map<String, String> SELECT_PLUGIN_DATA_QUERIES = new HashMap<>();
-
+public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
+    private final Map<String, String> INSERT_OR_UPDATE_PLAYER_DATA_QUERIES = new HashMap<>();
+    private final Map<String, String> SELECT_PLAYER_DATA_QUERIES = new HashMap<>();
 
     /**
      * Constructs a new PlayerManager instance.
@@ -30,14 +28,14 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
      * @param crescentCore      The CrescentCore plugin instance.
      * @param dbManager   The DatabaseManager instance.
      */
-    public PlayerDataManager(CrescentCore crescentCore, DatabaseManager dbManager) {
+    public PlayerDBManager(CrescentCore crescentCore, DatabaseManager dbManager) {
         super(crescentCore, dbManager);
-        populateAdditionalDataQueries();
-        populateSelectAdditionalDataQueries();
+        populatePlayerDataQueries();
+        populateSelectPlayerDataQueries();
     }
 
-    private void populateAdditionalDataQueries() {
-        for (String namespace : crescentCore.getDatabaseManager().getTableNamespaces()) {
+    private void populatePlayerDataQueries() {
+        for (String namespace : crescentCore.getDatabaseManager().getPlayerTableNames()) { //Should filter out tables that don't end in _player_data
             String primaryKey = "player_uuid";
             String query = "INSERT INTO %TABLENAME% (" + primaryKey + ", %COLUMN_LIST%) VALUES (?, %VALUE_PLACEHOLDERS%)" +
                     " ON DUPLICATE KEY UPDATE" +
@@ -45,8 +43,8 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
             query = query.replace("%TABLENAME%", namespace);
             StringBuilder columns = new StringBuilder();
             StringBuilder columnList = new StringBuilder();
-            Map<NamespacedKey, PluginData<?>> additionalData =
-                    PLAYER_DATA_REGISTRY.getPluginDataForNamespace(namespace);
+            Map<NamespacedKey, DataEntry<?>> additionalData =
+                    PLAYER_DATA_ENTRY_REGISTRY.getPlayerDataEntryForNamespace(namespace);
             // Iterate through the keyset to dictate column names
             for (NamespacedKey namespacedKey : additionalData.keySet()) {
                 String columnName = namespacedKey.value();
@@ -57,18 +55,18 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
             query = query.replace("%VALUE_PLACEHOLDERS%", StringUtils.repeat(
                     "?, ", additionalData.size()).trim().replaceAll(",$", ""));
             query = query.replace("%ITERATE_COLUMNS%", columns.toString().trim().replaceAll(",$", ""));
-            INSERT_OR_UPDATE_PLUGIN_DATA_QUERIES.put(namespace, query);
+            INSERT_OR_UPDATE_PLAYER_DATA_QUERIES.put(namespace, query);
         }
     }
 
-    private void populateSelectAdditionalDataQueries() {
-        for (String namespace : crescentCore.getDatabaseManager().getTableNamespaces()) {
+    private void populateSelectPlayerDataQueries() {
+        for (String namespace : crescentCore.getDatabaseManager().getPlayerTableNames()) {
             String primaryKey = "player_uuid";
             // Start building the SELECT query
             String query = "SELECT * FROM %TABLENAME% WHERE " + primaryKey + " = ?";
 
             // Finalize the query by replacing placeholders
-            SELECT_PLUGIN_DATA_QUERIES.put(namespace, query.replace("%TABLENAME%", namespace));
+            SELECT_PLAYER_DATA_QUERIES.put(namespace, query.replace("%TABLENAME%", namespace));
         }
     }
 
@@ -84,7 +82,6 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
         PlayerData playerData = getData(uuid);
         try (Connection connection = dbManager.getConnection()) {
             connection.setAutoCommit(false);
-            // Loop through the player's plugin data.
             prepareAndExecuteSaveStatement(uuid, connection, playerData);
             connection.commit();
             connection.setAutoCommit(true); // Restore autocommit mode
@@ -156,13 +153,13 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
         PlayerData playerData = new PlayerData(Bukkit.getPlayer(uuid));
         boolean hasData = false;
         try (Connection connection = dbManager.getConnection()) {
-            for (NamespacedKey namespacedKey : playerData.getAllPluginData().keySet()) {
-                String query = SELECT_PLUGIN_DATA_QUERIES.get(namespacedKey.namespace());
+            for (NamespacedKey namespacedKey : playerData.getAllDataEntries().keySet()) {
+                String query = SELECT_PLAYER_DATA_QUERIES.get(namespacedKey.namespace());
                 try (PreparedStatement statement = connection.prepareStatement(query)) {
                     statement.setString(1, uuid.toString());
                     ResultSet result = statement.executeQuery();
                     if (result.next()) {
-                        playerData.updateData(namespacedKey, result.getObject(namespacedKey.value()));
+                        playerData.updateDataValue(namespacedKey, result.getObject(namespacedKey.value()));
                         hasData = true;
                     }
                     result.close();
@@ -174,7 +171,6 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
         if (!hasData) {
             crescentCore.getLogger().info("Player UUID " + uuid + " is new! Setting default data...");
             setDefaultData(uuid, playerData);
-            dbManager.getServerDataManager().incrementPlayersJoined();
         } else {
             crescentCore.getLogger().info("Player UUID " + uuid + " data loaded successfully!");
         }
@@ -198,13 +194,13 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
             PlayerData playerData = new PlayerData(player);
             boolean hasData = false;
             try (Connection connection = dbManager.getConnection()) {
-                for (NamespacedKey namespacedKey : playerData.getAllPluginData().keySet()) {
-                    String query = SELECT_PLUGIN_DATA_QUERIES.get(namespacedKey.namespace());
+                for (NamespacedKey namespacedKey : playerData.getAllDataEntries().keySet()) {
+                    String query = SELECT_PLAYER_DATA_QUERIES.get(namespacedKey.namespace());
                     try (PreparedStatement statement = connection.prepareStatement(query)) {
                         statement.setString(1, uuid.toString());
                         try (ResultSet result = statement.executeQuery()) {
                             if (result.next()) {
-                                playerData.updateData(namespacedKey, result.getObject(namespacedKey.value()));
+                                playerData.updateDataValue(namespacedKey, result.getObject(namespacedKey.value()));
                                 hasData = true;
                             }
                         }
@@ -216,7 +212,6 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
             if (!hasData) {
                 crescentCore.getLogger().info("Player UUID " + uuid + " is new! Setting default data...");
                 setDefaultData(uuid, playerData);
-                dbManager.getServerDataManager().incrementPlayersJoined();
             }
             setData(uuid, playerData); // Assuming setData updates the player data in your system
         }
@@ -227,11 +222,11 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
 
 
     public void setDefaultData(UUID uuid, PlayerData playerData) {
-        playerData.updateData(
+        playerData.updateDataValue(
                 CrescentNamespaceKeys.PLAYER_USERNAME, Bukkit.getOfflinePlayer(uuid).getName());
-        playerData.updateData(
+        playerData.updateDataValue(
                 CrescentNamespaceKeys.PLAYER_FIRST_LOGIN, new Timestamp(System.currentTimeMillis()));
-        playerData.updateData(
+        playerData.updateDataValue(
                 CrescentNamespaceKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
     }
 
@@ -243,22 +238,22 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
     }
 
     private void prepareAndExecuteSaveStatement(UUID dataKey, Connection connection, PlayerData playerData) throws SQLException {
-        playerData.updateData(CrescentNamespaceKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
-        for (NamespacedKey key : PLAYER_DATA_REGISTRY.getPluginDataRegistry().keySet()) {
+        playerData.updateDataValue(CrescentNamespaceKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
+        for (NamespacedKey key : PLAYER_DATA_ENTRY_REGISTRY.getPlayerDataRegistry().keySet()) {
             String tableName = key.namespace();
-            String query = INSERT_OR_UPDATE_PLUGIN_DATA_QUERIES.get(tableName);
+            String query = INSERT_OR_UPDATE_PLAYER_DATA_QUERIES.get(tableName);
             if (query == null) {
                 continue;
             }
             try (PreparedStatement statement = connection.prepareStatement(query)) {
-                Set<NamespacedKey> namespacedKeys = PLAYER_DATA_REGISTRY.getPluginDataForNamespace(tableName).keySet();
+                Set<NamespacedKey> namespacedKeys = PLAYER_DATA_ENTRY_REGISTRY.getPlayerDataEntryForNamespace(tableName).keySet();
                 int index = 0;
                 statement.setString(++index, dataKey.toString()); // Set player UUID
                 for (NamespacedKey namespacedKey : namespacedKeys) {
-                    PluginData<?> playerPluginData = playerData.getPluginData(namespacedKey);
-                    setValueInStatement(namespacedKey, playerPluginData, statement, ++index); // Set plugin data values
+                    DataEntry<?> dataEntry = playerData.getDataEntry(namespacedKey);
+                    setValueInStatement(namespacedKey, dataEntry, statement, ++index); // Set player data values
                 }
-                statement.executeUpdate(); // Execute the prepared statement for each player's plugin data
+                statement.executeUpdate(); // Execute the prepared statement for each player's player data
             }
         }
     }
@@ -269,12 +264,21 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
         Bukkit.getScheduler().runTaskAsynchronously(crescentCore, this::loadAllData);
     }
 
-    private void setValueInStatement(NamespacedKey namespacedKey, PluginData<?> data, PreparedStatement statement, int index) throws SQLException {
+    private void setValueInStatement(NamespacedKey namespacedKey, DataEntry<?> data, PreparedStatement statement, int index) throws SQLException {
         switch (data.getType()) {
             case INT -> statement.setInt(index, (int) data.getValue());
+            case UNSIGNED_INT -> {
+                if (!(data.getValue() instanceof Integer integer)) {
+                    throw new IllegalArgumentException("Value for " + namespacedKey + " (UNSIGNED_INT) must be an integer!");
+                }
+                if (integer < 0) {
+                    throw new IllegalArgumentException("Value for " + namespacedKey + " (UNSIGNED_INT) must be positive!");
+                }
+                statement.setInt(index, (int) data.getValue());
+            }
             case DOUBLE -> statement.setDouble(index, (double) data.getValue());
             case FLOAT -> statement.setFloat(index, (float) data.getValue());
-            case VARCHAR_16 -> {
+            case VARCHAR_16, NULLABLE_VARCHAR_16 -> {
                 if (!(data.getValue() instanceof String string)) {
                     throw new IllegalArgumentException("Value for " + namespacedKey + " (VARCHAR_16) must be a string!");
                 }
@@ -283,7 +287,7 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
                 }
                 statement.setString(index, (String) data.getValue());
             }
-            case VARCHAR_36 -> {
+            case VARCHAR_36, NULLABLE_VARCHAR_36 -> {
                 if (!(data.getValue() instanceof String string)) {
                     throw new IllegalArgumentException("Value for " + namespacedKey + " (VARCHAR_36) must be a string!");
                 }
@@ -292,7 +296,7 @@ public class PlayerDataManager extends AbstractDataManager<UUID, PlayerData> {
                 }
                 statement.setString(index, (String) data.getValue());
             }
-            case VARCHAR_255 -> {
+            case VARCHAR_255, NULLABLE_VARCHAR_255 -> {
                 if (!(data.getValue() instanceof String string)) {
                     throw new IllegalArgumentException("Value for " + namespacedKey + " (VARCHAR_255) must be a string!");
                 }

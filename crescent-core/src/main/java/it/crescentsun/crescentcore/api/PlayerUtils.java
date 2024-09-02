@@ -1,6 +1,6 @@
 package it.crescentsun.crescentcore.api;
 
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.CrescentCore;
 import org.bukkit.Location;
 import org.bukkit.entity.Item;
@@ -32,7 +32,7 @@ public class PlayerUtils {
      * @return The PlayerData for the player.
      */
     public static PlayerData getPlayerData(UUID uuid) {
-        return CrescentCore.getInstance().getPlayerManager().getData(uuid);
+        return CrescentCore.getInstance().getPlayerDataManager().getData(uuid);
     }
 
     /**

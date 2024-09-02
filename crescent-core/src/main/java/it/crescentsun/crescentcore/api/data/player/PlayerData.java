@@ -1,50 +1,51 @@
-package it.crescentsun.crescentcore.core.data.player;
+package it.crescentsun.crescentcore.api.data.player;
 
 import it.crescentsun.crescentcore.CrescentCore;
 import it.crescentsun.crescentcore.api.event.player.PlayerDataFetchEvent;
 import it.crescentsun.crescentcore.api.event.player.PlayerDataUpdateEvent;
-import it.crescentsun.crescentcore.plugindata.PluginData;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
-import it.crescentsun.crescentcore.plugindata.PluginDataRegistry;
+import it.crescentsun.crescentcore.api.data.DataEntry;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.ApiStatus;
 
 import java.util.Map;
 import java.util.UUID;
 
-import static it.crescentsun.crescentcore.CrescentCore.PLAYER_DATA_REGISTRY;
+import static it.crescentsun.crescentcore.CrescentCore.PLAYER_DATA_ENTRY_REGISTRY;
 
 /**
  * Class used to store player data throughout the network.
- * To register custom data to be stored on the database and be accessible throughout the network,
- * see {@link PluginDataRegistry}.
+ * To register data entries to be stored on the database and be accessible throughout the network,
+ * see {@link PlayerDataRegistry}.
  */
 public class PlayerData {
-    private final Map<NamespacedKey, PluginData<?>> pluginData;
+    private final Map<NamespacedKey, DataEntry<?>> playerDataEntries;
     private final Player player;
 
-    protected PlayerData(Player player) {
+    @ApiStatus.Internal
+    public PlayerData(Player player) {
         this.player = player;
-        pluginData = PLAYER_DATA_REGISTRY.clonePluginDataRegistry();
+        playerDataEntries = PLAYER_DATA_ENTRY_REGISTRY.clonePlayerDataEntryRegistry();
     }
 
     /**
      * @return The unique ID of the player.
      */
     public UUID getUniqueId() {
-        return UUID.fromString(getData(CrescentNamespaceKeys.PLAYER_UUID));
+        return UUID.fromString(getDataValue(CrescentNamespaceKeys.PLAYER_UUID));
     }
 
     /**
-     * Returns the PluginData object for the given namespaced key.
+     * Returns the PlayerDataEntry object for the given namespaced key.
      * This method is solely used in database operations, though it can be used for debugging purposes.
      *
      * @param namespacedKey The namespaced key of the data to retrieve
-     * @return The PluginData object for the given namespaced key
+     * @return The PlayerDataEntry object for the given namespaced key
      */
-    public PluginData<?> getPluginData(NamespacedKey namespacedKey) {
-        return pluginData.get(namespacedKey);
+    public DataEntry<?> getDataEntry(NamespacedKey namespacedKey) {
+        return playerDataEntries.get(namespacedKey);
     }
 
     /**
@@ -56,15 +57,15 @@ public class PlayerData {
      * <br>
      * <br>
      * To use the data obtained through this method, you should cast it to the expected type. If you're not sure of the type to be used,
-     * you can use the method {@link #getPluginData(NamespacedKey)} to get the PluginData object and check its type with {@link PluginData#getType()}.
+     * you can use the method {@link #getDataEntry(NamespacedKey)} to get the PlayerDataEntry object and check its type with {@link DataEntry#getType()}.
      *
      * @param namespacedKey The namespaced key of the data to retrieve
      * @return The value of the additional data with the given namespaced key, or null if there were issues retrieving the data.
      * @param <V> The type of the data.
      */
     @SuppressWarnings("unchecked")
-    public <V> V getData(NamespacedKey namespacedKey) {
-        PluginData<?> data = pluginData.get(namespacedKey);
+    public <V> V getDataValue(NamespacedKey namespacedKey) {
+        DataEntry<?> data = playerDataEntries.get(namespacedKey);
         if (data == null) {
             CrescentCore.getInstance().getLogger().warning(
                     "Additional data [" + namespacedKey.namespace() + ":" + namespacedKey.value() + "] not found when retrieving!");
@@ -97,8 +98,8 @@ public class PlayerData {
      * @param value The new value to set. Must be of the same type as the original value.
      * @param <V> The type of the data.
      */
-    public <V> void updateData(NamespacedKey namespacedKey, V value) {
-        PluginData<?> data = pluginData.get(namespacedKey);
+    public <V> void updateDataValue(NamespacedKey namespacedKey, V value) {
+        DataEntry<?> data = playerDataEntries.get(namespacedKey);
         if (data == null) {
             CrescentCore.getInstance().getLogger().warning(
                     "Additional data [" + namespacedKey.namespace() + ":" + namespacedKey.value() + "] not found when updating!");
@@ -124,10 +125,10 @@ public class PlayerData {
 
     /**
      * Should only be used for debugging purposes.
-     * @return an immutable version of the plugin data registry.
+     * @return an immutable version of the player data registry.
      */
-    public Map<NamespacedKey, PluginData<?>> getAllPluginData() {
-        return Map.copyOf(pluginData);
+    public Map<NamespacedKey, DataEntry<?>> getAllDataEntries() {
+        return Map.copyOf(playerDataEntries);
     }
 
 }

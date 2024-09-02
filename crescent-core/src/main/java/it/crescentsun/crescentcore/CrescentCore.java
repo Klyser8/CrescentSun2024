@@ -1,13 +1,19 @@
 package it.crescentsun.crescentcore;
 
 import it.crescentsun.crescentcore.api.CrystalsProvider;
+import it.crescentsun.crescentcore.api.data.plugin.PluginDataRegistry;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
 import it.crescentsun.crescentcore.core.command.CrescentCoreCommands;
-import it.crescentsun.crescentcore.core.data.DatabaseManager;
-import it.crescentsun.crescentcore.core.data.player.PlayerDataManager;
+import it.crescentsun.crescentcore.core.data.JumpWarp;
+import it.crescentsun.crescentcore.core.data.ServerStats;
+import it.crescentsun.crescentcore.core.db.DatabaseManager;
+import it.crescentsun.crescentcore.core.db.PlayerDBManager;
+import it.crescentsun.crescentcore.core.db.PluginDBManager;
+import it.crescentsun.crescentcore.core.lang.CrescentCoreLocalization;
+import it.crescentsun.crescentcore.core.listener.BungeeListener;
 import it.crescentsun.crescentcore.core.listener.CrescentCoreListener;
-import it.crescentsun.crescentcore.plugindata.DataType;
-import it.crescentsun.crescentcore.plugindata.PluginDataRegistry;
+import it.crescentsun.crescentcore.api.data.DataType;
+import it.crescentsun.crescentcore.api.data.player.PlayerDataRegistry;
 import dev.triumphteam.cmd.bukkit.BukkitCommandManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -26,12 +32,15 @@ public class CrescentCore extends JavaPlugin {
 
     private DatabaseManager dbManager = null;
     private final Random random;
-    public static final PluginDataRegistry PLAYER_DATA_REGISTRY = new PluginDataRegistry();
+    public static final PlayerDataRegistry PLAYER_DATA_ENTRY_REGISTRY = new PlayerDataRegistry();
+    public static final PluginDataRegistry PLUGIN_DATA_REGISTRY = new PluginDataRegistry();
+//    public static final PluginDataRegistry PLUGIN_DATA_ENTRY_REGISTRY = new PluginDataRegistry();
+    public static final List<Class<?>> REGISTERED_PLUGIN_DATA_CLASSES = new ArrayList<>();
     private static CrescentCore instance;
     private CrystalsProvider crystalsProvider = null;
     private int debugLevel = 0;
-    public static final int LIVE_LOBBY_PORT = 8880;
-    public static final int TEST_LOBBY_PORT = 9880;
+    public static final int LIVE_PORT = 25565;
+    public static final int TEST_PORT = 25564;
     public CrescentCore() {
         random = new Random();
     }
@@ -43,16 +52,30 @@ public class CrescentCore extends JavaPlugin {
         debugLevel = getConfig().getInt("debug_level");           //Reads the debug level from the config
         scheduleAutoSave();                                      //Schedules the auto save task
 
+        CrescentCoreLocalization crescentCoreLocalization = new CrescentCoreLocalization();
+        crescentCoreLocalization.registerEnglishTranslations();
+        crescentCoreLocalization.registerItalianTranslations();
+
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(new CrescentCoreListener(this), this);
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+        getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", new BungeeListener());
         BukkitCommandManager<CommandSender> commandManager = BukkitCommandManager.create(this);
         commandManager.registerCommand(new CrescentCoreCommands(this));
         establishDatabaseConnection();
 
-        PLAYER_DATA_REGISTRY.registerPluginData(CrescentNamespaceKeys.PLAYER_USERNAME, DataType.VARCHAR_16, "");
-        PLAYER_DATA_REGISTRY.registerPluginData(CrescentNamespaceKeys.PLAYER_FIRST_LOGIN, DataType.TIMESTAMP, new Timestamp(0));
-        PLAYER_DATA_REGISTRY.registerPluginData(CrescentNamespaceKeys.PLAYER_LAST_SEEN, DataType.TIMESTAMP, new Timestamp(0));
+        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespaceKeys.PLAYER_USERNAME, DataType.VARCHAR_16, "");
+        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespaceKeys.PLAYER_FIRST_LOGIN, DataType.TIMESTAMP, new Timestamp(0));
+        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespaceKeys.PLAYER_LAST_SEEN, DataType.TIMESTAMP, new Timestamp(0));
+
+        PLUGIN_DATA_REGISTRY.registerDataClass(this, ServerStats.class);
+        PLUGIN_DATA_REGISTRY.registerDataClass(this, JumpWarp.class);
+/*        PLUGIN_DATA_ENTRY_REGISTRY.registerPluginDataBundle(CrescentNamespaceKeys.CRESCENTCORE_SERVER_STATS,
+                PluginDataBundle.Builder.create(this, "server", DataType.VARCHAR_16, "server")
+                        .addUnsignedInt("total_players")
+                        .addTimestamp("last_restart")
+                        .addUnsignedInt("most_players_online")
+                        .build());*/
     }
 
     @Override
@@ -84,7 +107,7 @@ public class CrescentCore extends JavaPlugin {
         int interval = getConfig().getInt("auto_save_interval");
         Bukkit.getScheduler().scheduleAsyncRepeatingTask(this, () -> {
             if (!Bukkit.getOnlinePlayers().isEmpty()) {
-                getPlayerManager().asyncSaveAllData();
+                getPlayerDataManager().asyncSaveAllData();
             }
         }, interval, interval);
     }
@@ -100,7 +123,11 @@ public class CrescentCore extends JavaPlugin {
         return crystalsProvider;
     }
 
-    public PlayerDataManager getPlayerManager() {
+    public PluginDBManager getPluginDataManager() {
+        return dbManager.getPluginDataManager();
+    }
+
+    public PlayerDBManager getPlayerDataManager() {
         return dbManager.getPlayerDataManager();
     }
     public DatabaseManager getDatabaseManager() {

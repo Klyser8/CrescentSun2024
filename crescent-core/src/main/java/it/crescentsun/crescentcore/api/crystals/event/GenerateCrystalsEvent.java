@@ -1,4 +1,4 @@
-package it.crescentsun.crescentcore.api.event.crystals;
+package it.crescentsun.crescentcore.api.crystals.event;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
@@ -14,10 +14,10 @@ import org.jetbrains.annotations.Nullable;
 public class GenerateCrystalsEvent extends Event implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
     private int amount;
-    private final CrystalGenerationSource generationSource;
+    private final CrystalSource generationSource;
     private Player player;
     private boolean cancelled;
-    public GenerateCrystalsEvent(int amount, CrystalGenerationSource generationSource, @Nullable Player player) {
+    public GenerateCrystalsEvent(int amount, CrystalSource generationSource, @Nullable Player player) {
         this.amount = amount;
         this.generationSource = generationSource;
         this.player = player;
@@ -62,7 +62,7 @@ public class GenerateCrystalsEvent extends Event implements Cancellable {
     /**
      * @return The reason the crystals are being spawned.
      */
-    public CrystalGenerationSource getGenerationSource() {
+    public CrystalSource getGenerationSource() {
         return generationSource;
     }
 

@@ -15,6 +15,7 @@ public class CrescentCoreLocalization {
     public static final TranslatableMessage SERVER_JOIN_MESSAGE_OTHER = new TranslatableMessage(MessageType.INFO);
 
     public static final TranslatableMessage GENERIC_SPECIFY_SERVER_NAME = new TranslatableMessage(MessageType.INCORRECT);
+    public static final TranslatableMessage GENERIC_ALREADY_CONNECTED_TO_SERVER = new TranslatableMessage(MessageType.ERROR);
 
     public static final TranslatableMessage GENERIC_AWAIT_TELEPORTATION = new TranslatableMessage(MessageType.INFO);
     public static final TranslatableMessage GENERIC_TELEPORTATION_CANCELLED = new TranslatableMessage(MessageType.ERROR);
@@ -22,6 +23,9 @@ public class CrescentCoreLocalization {
     public static final TranslatableMessage SAVING_PLAYER_DATA = new TranslatableMessage(MessageType.INFO);
     public static final TranslatableMessage SAVING_PLAYER_DATA_SUCCESS = new TranslatableMessage(MessageType.SUCCESS);
     public static final TranslatableMessage SAVING_PLAYER_DATA_FAILURE = new TranslatableMessage(MessageType.ERROR);
+
+    public static final TranslatableMessage RELOADING_DATA_SUCCESS = new TranslatableMessage(MessageType.SUCCESS);
+    public static final TranslatableMessage RELOADING_DATA_FAILURE = new TranslatableMessage(MessageType.ERROR);
 
     public static final TranslatableMessage TEST_MESSAGE = new TranslatableMessage(MessageType.INFO);
 
@@ -68,6 +72,18 @@ public class CrescentCoreLocalization {
         SAVING_PLAYER_DATA_FAILURE.addTranslation(
                 Locale.US,
                 Component.text("Failed to save player data. Check the console for more information.")
+        );
+        RELOADING_DATA_FAILURE.addTranslation(
+                Locale.US,
+                Component.text("Failed to reload data. Check the console for more information.")
+        );
+        RELOADING_DATA_SUCCESS.addTranslation(
+                Locale.US,
+                Component.text("Data reloaded from Database successfully.")
+        );
+        GENERIC_ALREADY_CONNECTED_TO_SERVER.addTranslation(
+                Locale.US,
+                Component.text("You are already connected to %s!")
         );
 
         TEST_MESSAGE.addTranslation(
@@ -117,10 +133,23 @@ public class CrescentCoreLocalization {
                 Locale.ITALY,
                 Component.text("Dati dei plugin salvati con successo.")
         );
+        RELOADING_DATA_FAILURE.addTranslation(
+                Locale.ITALY,
+                Component.text("Impossibile ricaricare i dati. Controlla la console per ulteriori informazioni.")
+        );
+        RELOADING_DATA_SUCCESS.addTranslation(
+                Locale.ITALY,
+                Component.text("Dati ricaricati dal Database con successo.")
+        );
         SAVING_PLAYER_DATA_FAILURE.addTranslation(
                 Locale.ITALY,
                 Component.text("Impossibile salvare i dati dei plugin. Controlla la console per ulteriori informazioni.")
         );
+        GENERIC_ALREADY_CONNECTED_TO_SERVER.addTranslation(
+                Locale.ITALY,
+                Component.text("Sei già connesso a %s!")
+        );
+
         TEST_MESSAGE.addTranslation(
                 Locale.ITALY,
                 Component.text("Ciao, %s! Questo è un messaggio di prova. Attualmente ti trovi nel mondo %s, alle coordinate %s, %s, %s."),

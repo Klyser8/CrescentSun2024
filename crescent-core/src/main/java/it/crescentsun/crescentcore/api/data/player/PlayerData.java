@@ -65,10 +65,13 @@ public class PlayerData {
      */
     @SuppressWarnings("unchecked")
     public <V> V getDataValue(NamespacedKey namespacedKey) {
+        if (!namespacedKey.getNamespace().contains("_player_data")) {
+            namespacedKey = new NamespacedKey(namespacedKey.getNamespace() + "_player_data", namespacedKey.getKey());
+        }
         DataEntry<?> data = playerDataEntries.get(namespacedKey);
         if (data == null) {
             CrescentCore.getInstance().getLogger().warning(
-                    "Additional data [" + namespacedKey.namespace() + ":" + namespacedKey.value() + "] not found when retrieving!");
+                    "Player data [" + namespacedKey.namespace() + ":" + namespacedKey.value() + "] not found when retrieving!");
             return null;
         }
         V value;
@@ -99,14 +102,17 @@ public class PlayerData {
      * @param <V> The type of the data.
      */
     public <V> void updateDataValue(NamespacedKey namespacedKey, V value) {
+        if (!namespacedKey.getNamespace().contains("_player_data")) {
+            namespacedKey = new NamespacedKey(namespacedKey.getNamespace() + "_player_data", namespacedKey.getKey());
+        }
         DataEntry<?> data = playerDataEntries.get(namespacedKey);
         if (data == null) {
             CrescentCore.getInstance().getLogger().warning(
-                    "Additional data [" + namespacedKey.namespace() + ":" + namespacedKey.value() + "] not found when updating!");
+                    "Player data [" + namespacedKey.namespace() + ":" + namespacedKey.value() + "] not found when updating!");
             return;
         }
         if (!data.getType().getTypeClass().isInstance(value)) {
-            throw new IllegalArgumentException("Additional data " + namespacedKey.namespace() + ":" + namespacedKey.value() +
+            throw new IllegalArgumentException("Player data " + namespacedKey.namespace() + ":" + namespacedKey.value() +
                     " was provided with an incorrect value! Expected " + data.getType().toString());
         }
         PlayerDataUpdateEvent event = new PlayerDataUpdateEvent(this, namespacedKey, value, !Bukkit.isPrimaryThread());

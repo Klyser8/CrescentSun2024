@@ -3,6 +3,7 @@ package it.crescentsun.crescentcore.core.listener;
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import it.crescentsun.crescentcore.api.BungeeUtils;
 import it.crescentsun.crescentcore.CrescentCore;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.api.data.plugin.PluginDataRegistry;
 import it.crescentsun.crescentcore.api.event.server.ServerLoadPostDBSetupEvent;
 import it.crescentsun.crescentcore.api.data.player.PlayerDataRegistry;
@@ -10,8 +11,9 @@ import it.crescentsun.crescentcore.api.event.player.PlayerJoinEventPostDBLoad;
 import it.crescentsun.crescentcore.api.event.player.PlayerQuitEventPostDBSave;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import it.crescentsun.crescentcore.core.data.JumpWarp;
+import it.crescentsun.crescentcore.core.lang.CrescentCoreLocalization;
 import it.crescentsun.crescentmsg.api.MessageFormatter;
+import me.mrnavastar.protoweaver.api.netty.Sender;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Bukkit;
@@ -25,8 +27,10 @@ import org.bukkit.event.player.PlayerRegisterChannelEvent;
 import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.sql.Timestamp;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -51,6 +55,19 @@ public class CrescentCoreListener implements Listener {
                         "<@yellow><b>You are currently on the test server.</b> Please report any bugs you encounter to the staff.</@>"));
             }, 20);
         }
+        loadPlayerDataAsync(player);
+
+        // If this is the first player joining the server, ALL plugin data must be loaded again. Only do this is it isn't the first player joining.
+        if (Bukkit.getOnlinePlayers().size() == 1) { //FIXME reloading every time there is a single player in the server who joins might be a waste of resources.
+            // Not async as it's important to load all data before any other player joins.
+            crescentCore.getPluginDataManager().reloadAllData();
+        }
+
+        player.addPotionEffect(new PotionEffect(
+                PotionEffectType.BLINDNESS, 50, 0, false, false));
+    }
+
+    private void loadPlayerDataAsync(Player player) {
         crescentCore.getPlayerDataManager().asyncLoadData(player.getUniqueId()).thenAcceptAsync(pData -> {
             if (pData == null) {
                 return;
@@ -68,20 +85,34 @@ public class CrescentCoreListener implements Listener {
                         "<@green><b>Welcome to the Crescent Sun Network,</@> <@aqua>" + player.getName() + "</@>!</b>"));
             }
         });
-        /*if (isServerLobby) {
-            player.teleport(Objects.requireNonNull(Bukkit.getWorld("world")).getSpawnLocation());
-            for (PotionEffect effect : player.getActivePotionEffects()) {
-                player.removePotionEffect(effect.getType());
-            }
-        }*/
-        player.addPotionEffect(new PotionEffect(
-                PotionEffectType.BLINDNESS, 50, 0, false, false));
     }
 
     @EventHandler
     public void onPlayerRegisterChannelEvent(PlayerRegisterChannelEvent event) {
         if (event.getChannel().equals("BungeeCord")) {
-            BungeeUtils.sendGetServerMessage(event.getPlayer());
+            if (crescentCore.getServerName() == null) {
+                BungeeUtils.sendGetServerMessage();
+            }
+            Bukkit.getScheduler().runTaskLater(crescentCore, () -> {
+                Player player = event.getPlayer();
+                player.sendMessage(CrescentCoreLocalization.SERVER_JOIN_MESSAGE_PLAYER.getFormattedMessage(player.locale(), crescentCore.getServerName()));
+                // Notify other players of the player's join
+                Bukkit.getOnlinePlayers().forEach(p -> {
+                    if (!p.equals(player)) {
+                        p.sendMessage(CrescentCoreLocalization.SERVER_JOIN_MESSAGE_OTHER.getFormattedMessage(p.locale(), player.getName()));
+                    }
+                });
+                // Notify the console of the player's join
+                Bukkit.getConsoleSender().sendMessage(CrescentCoreLocalization.SERVER_JOIN_MESSAGE_OTHER.getFormattedMessage(null, player.getName()));
+
+                // If the server is lobby, teleport the player to the world spawn.
+                if (crescentCore.getServerName().equalsIgnoreCase("lobby")) {
+                    player.teleport(Objects.requireNonNull(Bukkit.getWorld("world")).getSpawnLocation());
+                    for (PotionEffect effect : player.getActivePotionEffects()) {
+                        player.removePotionEffect(effect.getType());
+                    }
+                }
+            }, 5);
         }
     }
 
@@ -118,38 +149,16 @@ public class CrescentCoreListener implements Listener {
         crescentCore.getDatabaseManager().initPluginDataManager();
         crescentCore.getDatabaseManager().initPlayerDataManager();
         crescentCore.getPluginDataManager().loadAllData();
-        if (!Bukkit.getOnlinePlayers().isEmpty()) {
-            CompletableFuture<Boolean> future = crescentCore.getPlayerDataManager().loadAllData();
-            future.thenAccept(success -> {
-                if (success) {
-                    ServerLoadPostDBSetupEvent dbSetupEvent = new ServerLoadPostDBSetupEvent();
-                    Bukkit.getScheduler().callSyncMethod(crescentCore, () -> {
-                        Bukkit.getPluginManager().callEvent(dbSetupEvent);
-                        return null;
-                    });
-                }
-            });
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            crescentCore.getPlayerDataManager().loadData(player.getUniqueId());
         }
+        ServerLoadPostDBSetupEvent dbSetupEvent = new ServerLoadPostDBSetupEvent();
+        Bukkit.getPluginManager().callEvent(dbSetupEvent);
     }
 
     @EventHandler
     public void onPlayerJump(PlayerJumpEvent event) {
-        JumpWarp jumpWarp = new JumpWarp(
-                PLUGIN_DATA_REGISTRY.getDataRepository().getAllData(JumpWarp.class).size() + 1,
-                event.getPlayer() + String.valueOf(crescentCore.getRandom().nextInt(20000)),
-                event.getPlayer().getClientBrandName() + crescentCore.getRandom().nextInt(20000),
-                UUID.randomUUID(),
-                event.getPlayer().getLocation().getBlockX(),
-                event.getPlayer().getLocation().getBlockY(),
-                event.getPlayer().getLocation().getBlockZ(),
-                event.getPlayer().locale().getCountry() + crescentCore.getRandom().nextInt(20000),
-                UUID.randomUUID(),
-                -event.getPlayer().getLocation().getBlockX(),
-                -event.getPlayer().getLocation().getBlockY(),
-                -event.getPlayer().getLocation().getBlockZ()
-        );
-
-        PLUGIN_DATA_REGISTRY.getDataRepository().addData(JumpWarp.class, jumpWarp.getId(), jumpWarp);
+        Sender send = crescentCore.getCrescentSunConnection().send(crescentCore.getObjectSerializer().serialize(UUID.randomUUID()));
     }
 
     @EventHandler

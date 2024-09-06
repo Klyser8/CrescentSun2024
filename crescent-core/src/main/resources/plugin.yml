@@ -5,3 +5,5 @@ api-version: $apiVersion
 authors:
   - $author
 description: $description
+depend:
+  - ProtoWeaver

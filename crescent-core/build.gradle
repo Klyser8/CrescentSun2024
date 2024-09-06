@@ -8,6 +8,7 @@ dependencies {
     api libs.hikari.cp
     api libs.crescentmsg
     api libs.triumph.cmd
+    api libs.protoweaver
 }
 
 shadowJar {
@@ -18,6 +19,7 @@ shadowJar {
 publishing {
     publications {
         maven(MavenPublication) {
+            artifact(sourcesJar)
             artifactId = 'crescent-core'
             // Use the shadowJar artifact
             artifact shadowJar.archiveFile.get()

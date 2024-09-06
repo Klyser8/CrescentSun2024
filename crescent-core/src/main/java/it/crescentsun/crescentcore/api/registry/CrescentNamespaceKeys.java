@@ -23,8 +23,6 @@ public class CrescentNamespaceKeys {
     public static final NamespacedKey PLAYER_SHOW_CRYSTALIX = new NamespacedKey(KEY_CRYSTALS, "show_crystalix");
 
     // SERVER DATA
-    // crescent-core
-    public static final NamespacedKey CRESCENTCORE_SERVER_STATS = new NamespacedKey(KEY_CRESCENTCORE, "server_stats");
     // jumpwarps
     public static final NamespacedKey JUMPWARPS = new NamespacedKey(KEY_JUMPWARPS, "jumpwarps");
     public static final NamespacedKey JUMPWARPS_STATS = new NamespacedKey(KEY_JUMPWARPS, "stats");

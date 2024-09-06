@@ -35,7 +35,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
     }
 
     private void populatePlayerDataQueries() {
-        for (String namespace : crescentCore.getDatabaseManager().getPlayerTableNames()) { //Should filter out tables that don't end in _player_data
+        for (String namespace : crescentCore.getDatabaseManager().getPlayerTableNames()) {
             String primaryKey = "player_uuid";
             String query = "INSERT INTO %TABLENAME% (" + primaryKey + ", %COLUMN_LIST%) VALUES (?, %VALUE_PLACEHOLDERS%)" +
                     " ON DUPLICATE KEY UPDATE" +
@@ -112,7 +112,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
 
             // Assume getAllPlayerDataKeys() retrieves all player UUIDs
             for (UUID dataKey : dataMap.keySet()) {
-                PlayerData playerData = getData(dataKey); // Retrieve each player's data
+                PlayerData playerData = getData(dataKey); // Retrieve each player's datax
                 prepareAndExecuteSaveStatement(dataKey, connection, playerData);
                 savedData.put(dataKey, playerData);
             }
@@ -129,6 +129,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
     public CompletableFuture<PlayerData> asyncSaveData(UUID dataKey) {
         return CompletableFuture.supplyAsync(() -> saveData(dataKey)).exceptionally(e -> {
             crescentCore.getLogger().severe("An error occurred while saving player data: " + e.getMessage());
+            e.printStackTrace();
             return null;
         });
     }
@@ -136,6 +137,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
     public CompletableFuture<Map<UUID, PlayerData>> asyncSaveAllData() {
         return CompletableFuture.supplyAsync(this::saveAllData).exceptionally(e -> {
             crescentCore.getLogger().severe("An error occurred while saving all player data: " + e.getMessage());
+            e.printStackTrace();
             return null;
         });
     }
@@ -159,7 +161,8 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
                     statement.setString(1, uuid.toString());
                     ResultSet result = statement.executeQuery();
                     if (result.next()) {
-                        playerData.updateDataValue(namespacedKey, result.getObject(namespacedKey.value()));
+                        namespacedKey = new NamespacedKey(namespacedKey.getNamespace(), namespacedKey.getKey());
+                        playerData.updateDataValue(namespacedKey, result.getObject(namespacedKey.getKey()));
                         hasData = true;
                     }
                     result.close();
@@ -239,8 +242,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
 
     private void prepareAndExecuteSaveStatement(UUID dataKey, Connection connection, PlayerData playerData) throws SQLException {
         playerData.updateDataValue(CrescentNamespaceKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
-        for (NamespacedKey key : PLAYER_DATA_ENTRY_REGISTRY.getPlayerDataRegistry().keySet()) {
-            String tableName = key.namespace();
+        for (String tableName : dbManager.getPlayerTableNames()) {
             String query = INSERT_OR_UPDATE_PLAYER_DATA_QUERIES.get(tableName);
             if (query == null) {
                 continue;

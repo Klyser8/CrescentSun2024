@@ -4,6 +4,7 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.CrescentCore;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -13,6 +14,7 @@ import java.io.DataOutputStream;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+@SuppressWarnings("UnusedReturnValue")
 public class BungeeUtils  {
 
     /**
@@ -57,9 +59,9 @@ public class BungeeUtils  {
      *
      * @param player The player to get the server name from.
      */
-    public static void sendGetServerMessage(Player player) {
+    public static void sendGetServerMessage() {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("GetServer");
-        player.sendPluginMessage(CrescentCore.getInstance(), "BungeeCord", out.toByteArray());
+        Bukkit.getServer().sendPluginMessage(CrescentCore.getInstance(), "BungeeCord", out.toByteArray());
     }
 }

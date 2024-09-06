@@ -19,9 +19,7 @@ public enum DataType {
     NULLABLE_VARCHAR_36(String.class, "VARCHAR(36)"),
     VARCHAR_255(String.class, "VARCHAR(255) NOT NULL"),
     NULLABLE_VARCHAR_255(String.class, "VARCHAR(255)"),
-    TIMESTAMP(Timestamp.class, "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"),
-
-    AUTO_INCREMENT_INT(Integer.class, "INT NOT NULL AUTO_INCREMENT"); //Should never be used as an actual data type
+    TIMESTAMP(Timestamp.class, "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
 
     private final Class<?> clazz;
     private final String sqlType;

@@ -19,6 +19,7 @@ public final class PlayerDataRegistry {
 
     public PlayerDataRegistry() {}
     private static boolean isFrozen = false;
+    //Namespace is the table name (plugin name), key is the column name, and the DataEntry (value) is the data.
     private final Map<NamespacedKey, DataEntry<?>> playerDataRegistry = new HashMap<>();
 
     /**
@@ -34,10 +35,12 @@ public final class PlayerDataRegistry {
         if (isFrozen) {
             throw new UnsupportedOperationException("The player data registry is frozen and cannot be modified.");
         }
+        namespacedKey = new NamespacedKey(namespacedKey.getNamespace(), namespacedKey.getKey());
         if (!type.getTypeClass().isInstance(defaultValue)) {
             throw new IllegalArgumentException("The default value for player data " + namespacedKey +
                     " does not match the type" + type + "!");
         }
+        namespacedKey = new NamespacedKey(namespacedKey.getNamespace() + "_player_data", namespacedKey.getKey());
         DataEntry<V> data = new DataEntry<>(type, defaultValue);
         playerDataRegistry.put(namespacedKey, data);
         CrescentCore.getInstance().getLogger().info("Player data entry registered: " + namespacedKey);
@@ -56,13 +59,13 @@ public final class PlayerDataRegistry {
      * @return A deep copy of the additional data registry
      */
     public Map<NamespacedKey, DataEntry<?>> clonePlayerDataEntryRegistry() {
-        Map<NamespacedKey, DataEntry<?>> additionalDataMap = new HashMap<>();
+        Map<NamespacedKey, DataEntry<?>> playerDataMap = new HashMap<>();
         for (NamespacedKey key : playerDataRegistry.keySet()) {
             NamespacedKey newKey = new NamespacedKey(key.namespace(), key.value());
             DataEntry<?> newData = new DataEntry<>(playerDataRegistry.get(key));
-            additionalDataMap.put(newKey, newData); // Use the copy constructor
+            playerDataMap.put(newKey, newData); // Use the copy constructor
         }
-        return additionalDataMap;
+        return playerDataMap;
     }
 
     /**

@@ -4,8 +4,8 @@ import it.crescentsun.crescentcore.CrescentCore;
 import it.crescentsun.crescentcore.api.data.DataType;
 import it.crescentsun.crescentcore.api.data.DataEntry;
 import it.crescentsun.crescentcore.api.data.plugin.DatabaseColumn;
-import it.crescentsun.crescentcore.api.data.plugin.DatabaseTable;
 import it.crescentsun.crescentcore.api.data.plugin.PluginData;
+import it.crescentsun.crescentcore.api.data.plugin.PluginDataRepository;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -44,20 +44,14 @@ public class DatabaseManager {
     public void initTables() {
         // Populate tableNames for each plugin that has registered player data
         for (NamespacedKey namespacedKey : PLAYER_DATA_ENTRY_REGISTRY.clonePlayerDataEntryRegistry().keySet()) {
-            String fullTableName = namespacedKey.namespace() + "_player_data";
-            if (!tableNames.contains(fullTableName)) {
-                tableNames.add(fullTableName); //<pluginname>_player_data
+            String tableName = namespacedKey.namespace();
+            if (!tableNames.contains(tableName)) {
+                tableNames.add(tableName); //<pluginname>_player_data
             }
         }
         // Populate tableNames for each plugin that has registered plugin data
         for (Class<? extends PluginData> clazz : PLUGIN_DATA_REGISTRY.getRegistry()) {
-            if (!clazz.isAnnotationPresent(DatabaseTable.class)) {
-                crescentCore.getLogger().warning("Plugin data class" + clazz.getName() + " does not have a DatabaseTable annotation! Skipping it.");
-                continue;
-            }
-            DatabaseTable annotation = clazz.getAnnotation(DatabaseTable.class);
-            String fullTableName = annotation.plugin().getSimpleName() + "_" + annotation.tableName();
-            fullTableName = fullTableName.toLowerCase();
+            String fullTableName = PluginDataRepository.getTableNameFromPluginDataClass(clazz);
             if (!tableNames.contains(fullTableName)) {
                 tableNames.add(fullTableName); //<pluginname>_<plugindata>
             }
@@ -120,19 +114,20 @@ public class DatabaseManager {
     }
 
     private void addPluginPrimaryKeyAndColumns(String fullTableName, StringBuilder columns) {
-        Class<? extends PluginData> clazz = getPluginDataClassFromFullTableName(fullTableName);
-        if (clazz == null) {
+        Class<? extends PluginData> dataClass = PluginDataRepository.getPluginDataClassFromFullTableName(fullTableName);
+        if (dataClass == null) {
             crescentCore.getLogger().warning("Could not find plugin data class for " + fullTableName + " table");
             return;
         }
-        for (Field field : clazz.getDeclaredFields()) {
-            field.setAccessible(true);
-            if (!field.isAnnotationPresent(DatabaseColumn.class)) {
-                continue;
-            }
-            DatabaseColumn annotation = field.getAnnotation(DatabaseColumn.class);
+        Map<Field, DatabaseColumn> serializableFields = PluginDataRepository.getSerializableFields(dataClass);
+        for (Field field : serializableFields.keySet()) {
+            DatabaseColumn annotation = serializableFields.get(field);
             if (annotation.isPrimaryKey()) {
-                columns.append(annotation.columnName()).append(" ").append(annotation.dataType().getSqlType()).append(" PRIMARY KEY, ");
+                if (annotation.dataType().equals(DataType.VARCHAR_36) && annotation.columnName().equals("uuid")) {
+                    columns.append(annotation.columnName()).append(" ").append(annotation.dataType().getSqlType()).append(" PRIMARY KEY, ");
+                } else {
+                    crescentCore.getLogger().severe("Primary key for " + fullTableName + " table must be a VARCHAR(36) column named 'uuid'");
+                }
             } else {
                 columns.append(annotation.columnName()).append(" ").append(annotation.dataType().getSqlType()).append(", ");
             }
@@ -173,17 +168,14 @@ public class DatabaseManager {
     }
 
     private void updatePluginDataTable(Statement statement, String fullTableName) throws SQLException {
-        Class<? extends PluginData> clazz = getPluginDataClassFromFullTableName(fullTableName);
-        if (clazz == null) {
+        Class<? extends PluginData> dataClass = PluginDataRepository.getPluginDataClassFromFullTableName(fullTableName);
+        if (dataClass == null) {
             crescentCore.getLogger().warning("Could not find plugin data class for " + fullTableName + " table");
             return;
         }
-        for (Field field : clazz.getDeclaredFields()) {
-            field.setAccessible(true);
-            if (!field.isAnnotationPresent(DatabaseColumn.class)) {
-                continue;
-            }
-            DatabaseColumn annotation = field.getAnnotation(DatabaseColumn.class);
+        Map<Field, DatabaseColumn> serializableFields = PluginDataRepository.getSerializableFields(dataClass);
+        for (Field field : serializableFields.keySet()) {
+            DatabaseColumn annotation = serializableFields.get(field);
             if (doesColumnExist(fullTableName, annotation.columnName())) {
                 continue;
             }
@@ -229,7 +221,6 @@ public class DatabaseManager {
 
     public void saveEverything() {
         getPlayerDataManager().saveAllData();
-        getPluginDataManager().saveAllData();
     }
 
     public Connection getConnection() {
@@ -289,17 +280,6 @@ public class DatabaseManager {
             }
         }
         return pluginTableNames;
-    }
-
-    public Class<? extends PluginData> getPluginDataClassFromFullTableName(String fullTableName) {
-        String[] splitName = fullTableName.split("_", 2);
-        String pluginName = splitName[0];
-        String tableName = splitName[1];
-        return PLUGIN_DATA_REGISTRY.getRegistry().stream()
-                .filter(c -> c.isAnnotationPresent(DatabaseTable.class))
-                .filter(c -> c.getAnnotation(DatabaseTable.class).plugin().getSimpleName().equalsIgnoreCase(pluginName))
-                .filter(c -> c.getAnnotation(DatabaseTable.class).tableName().equals(tableName))
-                .findFirst().orElse(null);
     }
 
 }

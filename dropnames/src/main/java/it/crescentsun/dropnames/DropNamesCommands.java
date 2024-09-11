@@ -5,8 +5,8 @@ import it.crescentsun.crescentcore.cmd.core.BaseCommand;
 import it.crescentsun.crescentcore.cmd.core.annotation.Command;
 import it.crescentsun.crescentcore.cmd.core.annotation.Default;
 import it.crescentsun.crescentcore.cmd.core.annotation.SubCommand;
-import it.crescentsun.crescentmsg.MessageFormatter;
-import it.crescentsun.crescentmsg.MessageType;
+import it.crescentsun.crescentmsg.api.MessageFormatter;
+import it.crescentsun.crescentmsg.api.MessageType;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;
 

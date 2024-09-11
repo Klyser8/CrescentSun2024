@@ -1,11 +1,11 @@
 package it.crescentsun.crescentcore;
 
+import com.google.common.collect.ImmutableList;
 import it.crescentsun.crescentcore.api.CrystalsProvider;
-import it.crescentsun.crescentcore.api.data.plugin.PluginData;
 import it.crescentsun.crescentcore.api.data.plugin.PluginDataRegistry;
 import it.crescentsun.crescentcore.api.data.plugin.PluginDataRepository;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
-import it.crescentsun.crescentcore.core.BungeeConstants;
+import it.crescentsun.crescentcore.core.network.BungeeConstants;
 import it.crescentsun.crescentcore.core.command.CrescentCoreCommands;
 import it.crescentsun.crescentcore.core.db.DatabaseManager;
 import it.crescentsun.crescentcore.core.db.PlayerDBManager;
@@ -16,14 +16,10 @@ import it.crescentsun.crescentcore.core.listener.CrescentCoreListener;
 import it.crescentsun.crescentcore.api.data.DataType;
 import it.crescentsun.crescentcore.api.data.player.PlayerDataRegistry;
 import dev.triumphteam.cmd.bukkit.BukkitCommandManager;
-import it.crescentsun.crescentcore.core.protoweaver.CrescentSunClientHandler;
-import it.crescentsun.crescentcore.core.protoweaver.CrescentSunServerHandler;
-import me.mrnavastar.protoweaver.api.ProtoWeaver;
+import it.crescentsun.crescentcore.core.network.CrescentSunServerHandler;
 import me.mrnavastar.protoweaver.api.netty.ProtoConnection;
 import me.mrnavastar.protoweaver.api.protocol.CompressionType;
 import me.mrnavastar.protoweaver.api.protocol.Protocol;
-import me.mrnavastar.protoweaver.api.protocol.Side;
-import me.mrnavastar.protoweaver.core.util.ObjectSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -43,14 +39,12 @@ public class CrescentCore extends JavaPlugin {
     private DatabaseManager dbManager = null;
 
     private Protocol crescentSunProtocol = Protocol.create("crescentsun", "msg")
-            .setClientHandler(CrescentSunServerHandler.class)
-            .setServerHandler(CrescentSunClientHandler.class)
+            .setServerHandler(CrescentSunServerHandler.class)
             .setMaxPacketSize(67108864)
             .setCompression(CompressionType.GZIP)
-            .addPacket(Byte[].class)
+            .addPacket(byte[].class)
             .load();
     private ProtoConnection crescentSunConnection;
-    private ObjectSerializer objectSerializer = new ObjectSerializer();
 
     private final Random random;
     public static final PlayerDataRegistry PLAYER_DATA_ENTRY_REGISTRY = new PlayerDataRegistry();
@@ -58,20 +52,22 @@ public class CrescentCore extends JavaPlugin {
     private PluginDataRepository pluginDataRepository;
     private static CrescentCore instance;
     private CrystalsProvider crystalsProvider = null;
-    private int debugLevel = 0;
     private String serverName;
+    private List<String> serverList = new ArrayList<>();
     public CrescentCore() {
         random = new Random();
     }
 
     @Override
+    public void onLoad() {
+        super.onLoad();
+    }
+
+    @Override
     public void onEnable() {
         instance = this;
-        objectSerializer.register(Byte[].class);
         saveDefaultConfig();                                     //Saves the default config.yml file if it doesn't exist
 
-        ProtoWeaver.load(crescentSunProtocol);
-        debugLevel = getConfig().getInt("debug_level");           //Reads the debug level from the config
         pluginDataRepository = PLUGIN_DATA_REGISTRY.getDataRepository();
         scheduleAutoSave();                                      //Schedules the auto save task
 
@@ -123,7 +119,7 @@ public class CrescentCore extends JavaPlugin {
         int interval = getConfig().getInt("auto_save_interval");
         Bukkit.getScheduler().scheduleAsyncRepeatingTask(this, () -> {
             if (!Bukkit.getOnlinePlayers().isEmpty()) {
-                getPlayerDataManager().asyncSaveAllData();
+                getPlayerDBManager().asyncSaveAllData();
             }
         }, interval, interval);
     }
@@ -139,11 +135,11 @@ public class CrescentCore extends JavaPlugin {
         return crystalsProvider;
     }
 
-    public PluginDBManager getPluginDataManager() {
+    public PluginDBManager getPluginDBManager() {
         return dbManager.getPluginDataManager();
     }
 
-    public PlayerDBManager getPlayerDataManager() {
+    public PlayerDBManager getPlayerDBManager() {
         return dbManager.getPlayerDataManager();
     }
     public DatabaseManager getDatabaseManager() {
@@ -159,10 +155,6 @@ public class CrescentCore extends JavaPlugin {
         return instance;
     }
 
-    public int getDebugLevel() {
-        return debugLevel;
-    }
-
     public Random getRandom() {
         return random;
     }
@@ -175,13 +167,22 @@ public class CrescentCore extends JavaPlugin {
         return serverName;
     }
 
-    @ApiStatus.Internal
-    public void setServerName(String serverName) {
-        this.serverName = serverName;
+    public List<String> getServerList() {
+        return List.copyOf(serverList);
     }
 
-    public Protocol getCrescentSunProtocol() {
-        return crescentSunProtocol;
+    @ApiStatus.Internal
+    public void setServerList(List<String> serverList) {
+        // Copy to a mutable list
+        serverList = new ArrayList<>(serverList);
+        serverList.replaceAll(s -> s.startsWith("dev") ? s.substring(3) : s);
+        this.serverList = ImmutableList.copyOf(serverList);
+    }
+
+    @ApiStatus.Internal
+    public void setServerName(String serverName) {
+        serverName = serverName.startsWith("dev") ? serverName.substring(3) : serverName;
+        this.serverName = serverName;
     }
 
     public ProtoConnection getCrescentSunConnection() {
@@ -190,9 +191,5 @@ public class CrescentCore extends JavaPlugin {
 
     public void setCrescentSunConnection(ProtoConnection crescentSunConnection) {
         this.crescentSunConnection = crescentSunConnection;
-    }
-
-    public ObjectSerializer getObjectSerializer() {
-        return objectSerializer;
     }
 }

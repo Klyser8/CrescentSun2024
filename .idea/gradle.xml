@@ -10,6 +10,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/artifacts" />
+            <option value="$PROJECT_DIR$/command-tomes" />
             <option value="$PROJECT_DIR$/crescent-core" />
             <option value="$PROJECT_DIR$/crystals" />
             <option value="$PROJECT_DIR$/dropnames" />

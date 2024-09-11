@@ -1,24 +1,29 @@
 [versions]
 # Core
 paper-api = "1.21.1-R0.1-SNAPSHOT"
+#javax-annotation = "1.3.2"
 
 # Crescent Sun plugins
-crescent-core = "1.1.0e"
-jumpwarps = "1.1.0b"
-artifacts = "1.1.0b"
+crescent-core = "1.3.4"
+jumpwarps = "1.1.2"
+artifacts = "1.1.1"
 crystals = "1.1.0b"
 dropnames = "1.0.0b"
+command-tomes = "1.0.0"
 
 # Other dependencies
 triumph-cmd = "2.0.0-SNAPSHOT"
 hikari-cp = "5.1.0"
-crescentmsg = "1.1.0j"
+protoweaver = "1.3.15"
+crescentmsg = "1.1.3"
 
 [libraries]
 # Core
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api"}
 triumph-cmd = { module = "dev.triumphteam:triumph-cmd-bukkit", version.ref = "triumph-cmd"}
 hikari-cp = { module = "com.zaxxer:HikariCP", version.ref = "hikari-cp"}
+protoweaver = { module = "me.mrnavastar.protoweaver:paper", version.ref = "protoweaver"}
+#javax-annotation = {module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation"}
 crescentmsg = { module = "it.crescentsun:crescentmsg", version.ref = "crescentmsg"}
 
 # Crescent Sun plugins

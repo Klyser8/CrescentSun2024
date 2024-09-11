@@ -13,9 +13,7 @@ import org.bukkit.NamespacedKey;
 
 import java.lang.reflect.Field;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static it.crescentsun.crescentcore.CrescentCore.PLAYER_DATA_ENTRY_REGISTRY;
 import static it.crescentsun.crescentcore.CrescentCore.PLUGIN_DATA_REGISTRY;
@@ -184,15 +182,37 @@ public class DatabaseManager {
         }
     }
 
+    private final Map<String, Set<String>> columnCache = new HashMap<>();
+
     private boolean doesColumnExist(String tableName, String columnName) {
+        Set<String> columnNames = columnCache.computeIfAbsent(tableName.toLowerCase(), this::fetchColumnNames);
+        return columnNames.contains(columnName.toLowerCase());
+    }
+
+    private Set<String> fetchColumnNames(String tableName) {
+        Set<String> columnNames = new HashSet<>();
+        try (Connection connection = getConnection();
+             ResultSet rs = connection.getMetaData().getColumns(null, null, tableName, null)) {
+            while (rs.next()) {
+                String columnName = rs.getString("COLUMN_NAME");
+                columnNames.add(columnName.toLowerCase()); // To handle case-insensitive checks
+            }
+        } catch (SQLException e) {
+            crescentCore.getLogger().severe("Error fetching columns for table " + tableName + ": " + e.getMessage());
+        }
+        return columnNames;
+    }
+
+
+    /*private boolean doesColumnExist(String tableName, String columnName) {
         try (Connection connection = getConnection()) {
             DatabaseMetaData dbMetaData = connection.getMetaData();
             try (ResultSet rs = dbMetaData.getColumns(null, null, tableName, columnName)) {
                 if (rs.next()) {
-                    crescentCore.getLogger().info("Column " + columnName + " exists in " + tableName + " table");
+//                    crescentCore.getLogger().info("Column " + columnName + " exists in " + tableName + " table");
                     return true;
                 } else {
-                    crescentCore.getLogger().info("Column " + columnName + " does not exist in " + tableName + " table");
+//                    crescentCore.getLogger().info("Column " + columnName + " does not exist in " + tableName + " table");
                     return false;
                 }
             }
@@ -200,7 +220,7 @@ public class DatabaseManager {
             crescentCore.getLogger().severe("Error checking column existence: " + e.getMessage());
         }
         return false;
-    }
+    }*/
 
     private void addColumn(String tableName, String columnName, DataType dataType, boolean isPrimaryKey, Statement statement) throws SQLException {
         if (dataType == null) {

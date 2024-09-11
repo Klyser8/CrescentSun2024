@@ -1,10 +1,7 @@
 package it.crescentsun.crescentcore.api;
 
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
 import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.CrescentCore;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -31,12 +28,12 @@ public class BungeeUtils  {
     public static CompletableFuture<Boolean> saveDataAndSendPlayerToServer(
             CrescentCore crescentCore, JavaPlugin sendingPlugin, Player player, String server) {
         UUID uuid = player.getUniqueId();
-        CompletableFuture<PlayerData> playerDataFut = crescentCore.getPlayerDataManager().asyncSaveData(uuid);
+        CompletableFuture<PlayerData> playerDataFut = crescentCore.getPlayerDBManager().asyncSaveData(uuid);
         return playerDataFut.thenApplyAsync(playerData -> {
             if (playerData == null) {
                 return false;
             }
-            crescentCore.getPlayerDataManager().removeData(uuid);
+            crescentCore.getPlayerDBManager().removeData(uuid);
             try {
                 ByteArrayOutputStream b = new ByteArrayOutputStream();
                 DataOutputStream out = new DataOutputStream(b);
@@ -54,14 +51,4 @@ public class BungeeUtils  {
         });
     }
 
-    /**
-     * Sends a message to the BungeeCord server to get the name of the server the player is on.
-     *
-     * @param player The player to get the server name from.
-     */
-    public static void sendGetServerMessage() {
-        ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeUTF("GetServer");
-        Bukkit.getServer().sendPluginMessage(CrescentCore.getInstance(), "BungeeCord", out.toByteArray());
-    }
 }

@@ -61,7 +61,7 @@ public class CrescentCoreCommands extends BaseCommand {
     @Permission("crescent.crescentcore.save")
     public void saveCommand(final CommandSender sender) {
         sender.sendMessage(CrescentCoreLocalization.SAVING_PLAYER_DATA.getFormattedMessage(null));
-        CompletableFuture<Map<UUID, PlayerData>> futurePlayerMap = crescentCore.getPlayerDataManager().asyncSaveAllData();
+        CompletableFuture<Map<UUID, PlayerData>> futurePlayerMap = crescentCore.getPlayerDBManager().asyncSaveAllData();
         futurePlayerMap.thenAccept(saveMap -> {
             TextComponent text;
             if (!saveMap.isEmpty()) {
@@ -76,7 +76,7 @@ public class CrescentCoreCommands extends BaseCommand {
     @SubCommand("reload")
     @Permission("crescent.crescentcore.reload")
     public void reloadCommand(final CommandSender sender) {
-        boolean success = crescentCore.getPluginDataManager().reloadAllData();
+        boolean success = crescentCore.getPluginDBManager().reloadAllData();
         if (success) {
             sender.sendMessage(CrescentCoreLocalization.RELOADING_DATA_SUCCESS.getFormattedMessage(null));
         } else {

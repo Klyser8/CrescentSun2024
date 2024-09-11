@@ -3,7 +3,7 @@ package it.crescentsun.dropnames;
 import it.crescentsun.artifacts.api.ArtifactUtil;
 import it.crescentsun.artifacts.item.Artifact;
 import it.crescentsun.artifacts.item.ArtifactFlag;
-import it.crescentsun.crescentmsg.MessageFormatter;
+import it.crescentsun.crescentmsg.api.MessageFormatter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import org.bukkit.World;

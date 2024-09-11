@@ -8,12 +8,19 @@ dependencies {
     api libs.hikari.cp
     api libs.crescentmsg
     api libs.triumph.cmd
-    api libs.protoweaver
+    api(libs.protoweaver) {
+        artifact {
+            name = "paper"
+            extension = "jar"
+            classifier = ""
+        }
+    }
 }
 
 shadowJar {
     archiveClassifier.set("")
     relocate 'dev.triumphteam.cmd', 'it.crescentsun.crescentcore.cmd'
+    exclude 'me/mrnavastar/**'
 }
 
 publishing {

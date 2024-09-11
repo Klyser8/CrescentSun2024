@@ -2,6 +2,8 @@ package it.crescentsun.crescentcore.api.data.plugin;
 
 import com.google.common.collect.ImmutableList;
 import it.crescentsun.crescentcore.CrescentCore;
+import it.unimi.dsi.fastutil.objects.ObjectObjectImmutablePair;
+import me.mrnavastar.protoweaver.core.util.ObjectSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -22,9 +24,13 @@ public final class PluginDataRegistry {
     private final PluginDataRepository dataRepository;
     private static boolean isFrozen;
     private final List<Class<? extends PluginData>> registry = new ArrayList<>();
+    private final ObjectSerializer pluginDataSerializer = new ObjectSerializer();
 
     public PluginDataRegistry() {
         dataRepository = new PluginDataRepository();
+        pluginDataSerializer.register(byte[].class);
+        pluginDataSerializer.register(PluginDataIdentifier.class);
+        pluginDataSerializer.register(ObjectObjectImmutablePair.class);
     }
 
     /**
@@ -46,6 +52,7 @@ public final class PluginDataRegistry {
         }
         registry.add(dataClass);
         dataRepository.registerNew(dataClass);
+        pluginDataSerializer.register(dataClass);
         CrescentCore.getInstance().getLogger().info("Plugin data class registered for plugin " + plugin.getName() + ": " + dataClass.getName());
     }
 
@@ -62,6 +69,10 @@ public final class PluginDataRegistry {
 
     public PluginDataRepository getDataRepository() {
         return dataRepository;
+    }
+
+    public ObjectSerializer getPluginDataSerializer() {
+        return pluginDataSerializer;
     }
 
 }

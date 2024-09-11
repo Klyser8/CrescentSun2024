@@ -1,6 +1,5 @@
 package it.crescentsun.jumpwarps;
 
-import it.crescentsun.jumpwarps.warphandling.JumpWarpBlock;
 import org.bukkit.Location;
 
 public class JumpWarpUtil {
@@ -12,7 +11,7 @@ public class JumpWarpUtil {
      * @param loc The location to check.
      * @return True if the location is within a jump warp, false otherwise.
      */
-    public static boolean isWithinJumpWarp(Location loc, JumpWarpBlock jumpWarp) {
+    public static boolean isWithinJumpWarp(Location loc, JumpWarpData jumpWarp) {
         return jumpWarp.getLocation().distance(loc) < JUMPWARP_DETECTION_RADIUS;
     }
 

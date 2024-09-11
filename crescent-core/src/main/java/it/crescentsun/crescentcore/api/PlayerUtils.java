@@ -20,7 +20,10 @@ public class PlayerUtils {
      *
      * @param player The player to get the PlayerData for.
      * @return The PlayerData for the player.
+     *
+     * @deprecated See {@link #getPlayerData(UUID)}
      */
+    @Deprecated
     public static PlayerData getPlayerData(Player player) {
         return getPlayerData(player.getUniqueId());
     }
@@ -30,9 +33,12 @@ public class PlayerUtils {
      *
      * @param uuid The UUID of the player.
      * @return The PlayerData for the player.
+     *
+     * @deprecated To be moved to {@link CrescentCore}
      */
+    @Deprecated
     public static PlayerData getPlayerData(UUID uuid) {
-        return CrescentCore.getInstance().getPlayerDataManager().getData(uuid);
+        return CrescentCore.getInstance().getPlayerDBManager().getData(uuid);
     }
 
     /**

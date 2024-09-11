@@ -1,13 +1,27 @@
 package it.crescentsun.crescentcore.api.event.server;
 
 import org.bukkit.event.HandlerList;
-import org.bukkit.event.server.ServerEvent;
+import org.bukkit.event.server.ServerLoadEvent;
+import org.jetbrains.annotations.NotNull;
 
 /**
- * Event called after the server has loaded and the database has been set up.
+ * Event called after {@link ServerLoadEvent}, after initial database set up + data loading is complete.
+ * <b>IMPORTANT</b>: This event is fired <u>before</u> any connection to the proxy is made!
+ * To run logic after the connection to the proxy is made, use {@link ProtoweaverConnectionEstablishedEvent}.
  */
-public class ServerLoadPostDBSetupEvent extends ServerEvent {
+@SuppressWarnings("ALL")
+public class ServerLoadPostDBSetupEvent extends ServerLoadEvent {
     private static final HandlerList handlers = new HandlerList();
+
+    /**
+     * Creates a {@code ServerLoadEvent} with a given loading type.
+     *
+     * @param type the context in which the server was loaded
+     */
+    public ServerLoadPostDBSetupEvent(@NotNull ServerLoadEvent.LoadType type) {
+        super(type);
+    }
+
     @Override
     public HandlerList getHandlers() {
         return handlers;

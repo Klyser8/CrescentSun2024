@@ -4,13 +4,19 @@ import it.crescentsun.crescentcore.cmd.bukkit.annotation.Permission;
 import it.crescentsun.crescentcore.cmd.core.BaseCommand;
 import it.crescentsun.crescentcore.cmd.core.annotation.Command;
 import it.crescentsun.crescentcore.cmd.core.annotation.Default;
+import it.crescentsun.crescentcore.cmd.core.annotation.Optional;
 import it.crescentsun.crescentcore.cmd.core.annotation.SubCommand;
-import it.crescentsun.crescentmsg.MessageFormatter;
-import it.crescentsun.crescentmsg.MessageType;
+import it.crescentsun.crescentmsg.api.MessageFormatter;
+import it.crescentsun.crescentmsg.api.MessageType;
+import it.crescentsun.jumpwarps.lang.JumpWarpLocalization;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 
 @Command(value = "jumpwarps", alias = "jw")
 public class JumpWarpCommands extends BaseCommand {
@@ -24,9 +30,11 @@ public class JumpWarpCommands extends BaseCommand {
     @Default
     @Permission("crescent.jumpwarps")
     public void defaultCommand(final CommandSender sender) {
-        TextComponent text = MessageFormatter.formatCommandMessage(
-                MessageType.INFO, Component.text("Type \"/jumpwarps help\" for help."), "/jumpwarps help");
-        sender.sendMessage(text);
+        if (sender instanceof Player player) {
+            player.sendMessage(JumpWarpLocalization.UNKNOWN_USAGE.getFormattedMessage(player.locale()));
+        } else {
+            sender.sendMessage(JumpWarpLocalization.UNKNOWN_USAGE.getFormattedMessage(null));
+        }
     }
 
     @SubCommand("help")
@@ -63,7 +71,7 @@ public class JumpWarpCommands extends BaseCommand {
             sender.sendMessage(text);
             return;
         }
-        if (plugin.getJumpWarpManager().createJumpWarp(player, warpName, targetServerName)) {
+        if (plugin.getJumpWarpManager().createJumpWarp(player, warpName, targetServerName) != null) {
             TextComponent text = MessageFormatter.formatCommandMessage(MessageType.SUCCESS,
                     "JumpWarp \"" + warpName + "\" created successfully!", warpName);
             sender.sendMessage(text);
@@ -81,13 +89,12 @@ public class JumpWarpCommands extends BaseCommand {
             sender.sendMessage(text);
             return;
         }
-        if (!plugin.getJumpWarpManager().getJumpWarps().containsKey(warpName)) {
+        if (!plugin.getJumpWarpManager().deleteJumpWarp(warpName)) {
             TextComponent text = MessageFormatter.formatCommandMessage(MessageType.INCORRECT,
                     "JumpWarp \"" + warpName + "\" does not exist.", warpName);
             sender.sendMessage(text);
             return;
         }
-        plugin.getJumpWarpManager().deleteJumpWarp(warpName);
         TextComponent text = MessageFormatter.formatCommandMessage(MessageType.SUCCESS,
                 "JumpWarp \"" + warpName + "\" deleted successfully.", warpName);
         sender.sendMessage(text);
@@ -95,20 +102,34 @@ public class JumpWarpCommands extends BaseCommand {
 
     @SubCommand("list")
     @Permission("crescent.jumpwarps.list")
-    public void listCommand(final CommandSender sender) {
-        //Iterate through each key in JumpWarp, then send a message showing the JumpWarp name, location, and target server name.
-        TextComponent text = MessageFormatter.formatCommandMessage(MessageType.INFO, "List of JumpWarps:");
-        sender.sendMessage(text);
-        plugin.getJumpWarpManager().getJumpWarps().forEach((warpName, jumpWarp) -> {
-            TextComponent warpText = MessageFormatter.formatCommandMessage(MessageType.INFO,
-                    warpName +
-                            " (" + jumpWarp.getX() + " " + jumpWarp.getY() + " " + jumpWarp.getZ()
-                            + ") - Target Server: " + jumpWarp.getTargetServerName(),
-                    warpName,
-                    String.valueOf(jumpWarp.getX()), String.valueOf(jumpWarp.getY()), String.valueOf(jumpWarp.getZ()),
-                    jumpWarp.getTargetServerName());
-            sender.sendMessage(warpText);
-        });
+    public void listCommand(final CommandSender sender, @Optional final Boolean networkWide) {
+        Locale locale = sender instanceof Player player ? player.locale() : null;
+        if (networkWide == null || !networkWide) {
+            List<JumpWarpData> jumpWarps = plugin.getJumpWarpManager().getAllData(true);
+            sender.sendMessage(JumpWarpLocalization.LIST_TITLE_SERVER.getFormattedMessage(locale, plugin.getCrescentCore().getServerName()));
+            sender.sendMessage(JumpWarpLocalization.LIST_HEADER_SERVER.getFormattedMessage(locale));
+            for (JumpWarpData jumpWarp : jumpWarps) {
+                sender.sendMessage(JumpWarpLocalization.LIST_ROW_SERVER.getFormattedMessage(locale,
+                        jumpWarp.getWarpName(),
+                        jumpWarp.getLocation().getWorld() == null ? "unknown" : jumpWarp.getLocation().getWorld().getName(),
+                        String.valueOf(jumpWarp.getX()), String.valueOf(jumpWarp.getY()), String.valueOf(jumpWarp.getZ()),
+                        jumpWarp.getDestinationServer()
+                ));
+            }
+        } else {
+            List<JumpWarpData> jumpWarps = plugin.getJumpWarpManager().getAllData(false);
+            sender.sendMessage(JumpWarpLocalization.LIST_TITLE_NETWORK.getFormattedMessage(locale));
+            sender.sendMessage(JumpWarpLocalization.LIST_HEADER_NETWORK.getFormattedMessage(locale));
+            for (JumpWarpData jumpWarp : jumpWarps) {
+                sender.sendMessage(JumpWarpLocalization.LIST_ROW_NETWORK.getFormattedMessage(locale,
+                        jumpWarp.getWarpName(),
+                        jumpWarp.getServer(),
+                        jumpWarp.getLocation().getWorld() == null ? "unknown" : jumpWarp.getLocation().getWorld().getName(),
+                        String.valueOf(jumpWarp.getX()), String.valueOf(jumpWarp.getY()), String.valueOf(jumpWarp.getZ()),
+                        jumpWarp.getDestinationServer()
+                ));
+            }
+        }
     }
 
 }

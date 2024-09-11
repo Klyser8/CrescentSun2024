@@ -3,20 +3,29 @@ package it.crescentsun.jumpwarps;
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import it.crescentsun.crescentcore.api.BungeeUtils;
 import it.crescentsun.crescentcore.api.PlayerUtils;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.event.server.ProtoweaverConnectionEstablishedEvent;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
-import it.crescentsun.jumpwarps.warphandling.JumpWarpBlock;
+import it.crescentsun.crescentmsg.api.MessageFormatter;
+import it.crescentsun.crescentmsg.api.MessageType;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockRedstoneEvent;
+import org.bukkit.event.entity.EntityInteractEvent;
+import org.bukkit.event.player.PlayerEditBookEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.inventory.meta.WritableBookMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.concurrent.CompletableFuture;
 
 public class JumpListener implements Listener {
 
@@ -30,7 +39,7 @@ public class JumpListener implements Listener {
     public void onRedstoneTrigger(BlockRedstoneEvent event) {
         Block block = event.getBlock();
         Location loc = block.getLocation();
-        JumpWarpBlock jumpWarp = plugin.getJumpWarpManager().getJumpWarpAtLocation(loc);
+        JumpWarpData jumpWarp = plugin.getJumpWarpManager().getJumpWarpAtLocation(loc);
         if (jumpWarp == null) {
             return;
         }
@@ -47,19 +56,89 @@ public class JumpListener implements Listener {
         }
     }
 
+//    @EventHandler
+    public void onPressurePlateTrigger(EntityInteractEvent event) {
+        if (!(event.getEntity() instanceof Item item && item.getItemStack().getType() == Material.WRITTEN_BOOK)) {
+            return;
+        }
+        if (item.getThrower() == null) {
+            return;
+        }
+        if (!(Bukkit.getEntity(item.getThrower()) instanceof Player player)) {
+            return;
+        }
+        Block block = event.getBlock();
+        if (block.getType() != Material.LIGHT_WEIGHTED_PRESSURE_PLATE) {
+            return;
+        }
+        BookMeta meta = (BookMeta) item.getItemStack().getItemMeta();
+        if (meta == null) {
+            return;
+        }
+        String jumpWarpName = meta.getTitle();
+        if (meta.pages().isEmpty()) {
+            return;
+        }
+        TextComponent firstPageComponent = (TextComponent) meta.pages().getFirst();
+        String serverDestination = firstPageComponent.content();
+        // Ensure there is no other jumpwarps in the radius of 64 blocks TODO: From the same guild it should be every 256 blocks!
+        for (JumpWarpData jumpWarp : plugin.getJumpWarpManager().getAllData(true)) {
+            if (jumpWarp.getLocation().distance(block.getLocation()) < 64) {
+                player.sendMessage(MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "There is already a Jump Warp within 64 blocks of this location.", "64 blocks", "Jump Warp"));
+                item.setItemStack(new ItemStack(Material.WRITABLE_BOOK));
+                return;
+            }
+        }
+        // Check that the player has enough crystals for this action
+        PlayerData data = plugin.getCrescentCore().getPlayerDBManager().getData(player.getUniqueId());
+        int crystals = data.getDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT);
+        if (crystals < 10) {
+            player.sendMessage(MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "You do not have enough crystals (10) to create a Jump Warp.", "10", "Jump Warp"));
+            item.setItemStack(new ItemStack(Material.WRITABLE_BOOK));
+            return;
+        }
+    }
+
+//    @EventHandler
+    public void onBookSign(PlayerEditBookEvent event) {
+        if (!event.isSigning()) { //TODO: implement writing of books for creation of jumpwarps. Possibly a
+            return;
+        }
+        BookMeta bookmeta = event.getNewBookMeta();
+        TextComponent firstPage = (TextComponent) bookmeta.pages().getFirst();
+        if (!bookmeta.hasTitle() || bookmeta.title() == null) {
+            return;
+        }
+        //noinspection DataFlowIssue
+        String titleContent = ((TextComponent) bookmeta.title()).content();
+        if (!titleContent.contains("{Jump Warp}")) {
+            return;
+        }
+        // Remove {Jump Warp}
+        Player player = event.getPlayer();
+        String warpName = titleContent.replace("{Jump Warp} ", "");
+        if (plugin.getJumpWarpManager().doesJumpWarpExist(warpName)) {
+            event.setCancelled(true);
+            player.sendMessage(MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "A Jump Warp with the name " + warpName + " already exists.", warpName, "Jump Warp"));
+        }
+        String serverDestination = firstPage.content();
+        if (!plugin.getJumpWarpManager().doesServerDestinationExist(serverDestination)) {
+            event.setCancelled(true);
+            player.sendMessage(MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "The server destination " + serverDestination + " does not exist.", serverDestination, "Jump Warp"));
+        }
+        player.sendMessage(MessageFormatter.formatCommandMessage(MessageType.SUCCESS,
+                "You've successfully signed a book for a Jump Warp called " + warpName + " to the server " + serverDestination + ".",
+                warpName, "Jump Warp", serverDestination));
+    }
+
     @EventHandler
     public void onPlayerJump(PlayerJumpEvent event) {
         Player player = event.getPlayer();
-
-        PlayerData data = PlayerUtils.getPlayerData(player);
-        int jumps = data.getData(CrescentNamespaceKeys.JUMPWARPS_USED);
-        data.updateData(CrescentNamespaceKeys.JUMPWARPS_USED, jumps + 1);
-
-        JumpWarpBlock jumpWarp = plugin.getJumpWarpManager().getJumpWarpAtLocation(player.getLocation());
-        PotionEffect jumpEffect = player.getPotionEffect(PotionEffectType.JUMP_BOOST);
+        JumpWarpData jumpWarp = plugin.getJumpWarpManager().getJumpWarpAtLocation(player.getLocation());
         if (jumpWarp == null) {
             return;
         }
+        PotionEffect jumpEffect = player.getPotionEffect(PotionEffectType.JUMP_BOOST);
         if (jumpEffect == null || jumpEffect.getAmplifier() < 90) {
             return;
         }
@@ -70,7 +149,7 @@ public class JumpListener implements Listener {
         }
     }
 
-    private void launchPlayer(Player player, JumpWarpBlock jumpWarpBlock) {
+    private void launchPlayer(Player player, JumpWarpData jumpWarpBlock) {
         World world = player.getWorld();
         playLaunchSounds(player, world);
         applyLaunchPotionEffects(player);
@@ -95,38 +174,33 @@ public class JumpListener implements Listener {
      * Schedules a task that will teleport the player to the appropriate server after 2 seconds.
      * @param player The player to teleport.
      */
-    private void scheduleLaunchTask(Player player, JumpWarpBlock jumpWarp) {
+    private void scheduleLaunchTask(Player player, JumpWarpData jumpWarp) {
         World world = player.getWorld();
         new BukkitRunnable() {
             private int ticks = 0;
-
-            private CompletableFuture<PlayerData> playerDataFut;
+            private boolean isCurrentlyWarping = false;
 
             @Override
             public void run() {
-                if (ticks == 0) {
-                    //Saves the player data.
-                    plugin.getLogger().info("Saving player data...");
-                    playerDataFut = plugin.getKlyNetCore().getPlayerManager().asyncSaveData(player.getUniqueId());
-                    playerDataFut.thenAcceptAsync(playerData -> {
-                        if (playerData != null) {
-                            plugin.getLogger().info("Player data saved.");
-                        }
-                    });
-                }
                 if (ticks >= 100) {
                     cancel();
+                    plugin.getLogger().warning("Failed to send player " + player.getName() + " to server after 100 ticks.");
                     return;
                 }
                 //After 30 ticks, will attempt sending the player to the target server every tick.
-                if (ticks >= 30) {
-                    plugin.getLogger().info("Attempting to send player to server...");
-                    if (playerDataFut.isDone() && !playerDataFut.isCompletedExceptionally()) {
-                        plugin.getLogger().info("Sending player to server.");
-                        BungeeUtils.saveDataAndSendPlayerToServer(
-                                plugin.getKlyNetCore(), plugin, player, jumpWarp.getTargetServerName());
-                        cancel();
-                    }
+                if (ticks >= 30 && !isCurrentlyWarping) {
+                    plugin.getLogger().info("Sending player to server.");
+                    isCurrentlyWarping = true;
+                    BungeeUtils.saveDataAndSendPlayerToServer(
+                            plugin.getCrescentCore(), plugin, player, jumpWarp.getDestinationServer()).thenApplyAsync((result) -> {
+                                if (result) {
+                                    plugin.getLogger().info("Player sent to server " + jumpWarp.getDestinationServer());
+                                } else {
+                                    plugin.getLogger().warning("Failed to send player to server " + jumpWarp.getDestinationServer());
+                                }
+                                cancel();
+                                return result;
+                    });
                 }
                 if (player.getVelocity().getY() > 1) {
                     spawnParticles(world, player);

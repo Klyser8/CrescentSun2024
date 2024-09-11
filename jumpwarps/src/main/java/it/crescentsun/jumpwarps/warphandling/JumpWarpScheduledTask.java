@@ -1,5 +1,6 @@
 package it.crescentsun.jumpwarps.warphandling;
 
+import it.crescentsun.jumpwarps.JumpWarpData;
 import it.crescentsun.jumpwarps.JumpWarps;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -16,11 +17,11 @@ import java.util.function.Consumer;
 public class JumpWarpScheduledTask implements Consumer<BukkitTask> {
 
     private final JumpWarps plugin;
-    private final JumpWarpBlock jumpWarp;
+    private final JumpWarpData jumpWarp;
     private int tickCounter;
     private final Location fxLoc;
 
-    public JumpWarpScheduledTask(JumpWarps plugin, JumpWarpBlock jumpWarp) {
+    public JumpWarpScheduledTask(JumpWarps plugin, JumpWarpData jumpWarp) {
         this.plugin = plugin;
         this.jumpWarp = jumpWarp;
         tickCounter = 0;
@@ -29,7 +30,8 @@ public class JumpWarpScheduledTask implements Consumer<BukkitTask> {
 
     @Override
     public void accept(BukkitTask bukkitTask) {
-        if (!plugin.getJumpWarpManager().getJumpWarps().containsKey(jumpWarp.getJumpWarpName())) {
+        // If the jumpwarp is removed, cancel the task.
+        if (plugin.getJumpWarpManager().getJumpWarpByName(jumpWarp.getWarpName()) == null) {
             bukkitTask.cancel();
         }
         //Check if a player enters the jumpwarp.

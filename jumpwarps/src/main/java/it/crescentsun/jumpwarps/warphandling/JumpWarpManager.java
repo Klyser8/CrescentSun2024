@@ -1,22 +1,24 @@
 package it.crescentsun.jumpwarps.warphandling;
 
 import it.crescentsun.crescentcore.api.VectorUtils;
+import it.crescentsun.crescentcore.api.data.plugin.AbstractPluginDataManager;
+import it.crescentsun.crescentcore.api.data.plugin.PluginData;
+import it.crescentsun.jumpwarps.JumpWarpData;
 import it.crescentsun.jumpwarps.JumpWarps;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
-import java.util.HashMap;
-import java.util.Map;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.*;
 
 /**
  * Manages all jump warps.
  */
-public class JumpWarpManager {
-    private final JumpWarps plugin;
-    private final Map<String, JumpWarpBlock> jumpWarps;
+public class JumpWarpManager extends AbstractPluginDataManager<JumpWarps, JumpWarpData> {
 
     public JumpWarpManager(JumpWarps plugin) {
-        this.plugin = plugin;
-        jumpWarps = new HashMap<>();
+        super(plugin, JumpWarpData.class);
     }
 
     /**
@@ -27,74 +29,22 @@ public class JumpWarpManager {
      * @param targetServerName The name of the target server.
      * @return True if the jumpwarp was created successfully, false otherwise.
      */
-    public boolean createJumpWarp(Player creator, String warpName, String targetServerName) {
+    public JumpWarpData createJumpWarp(Player creator, String warpName, String targetServerName) {
         if (creator == null
                 || warpName == null || warpName.isEmpty()
                 || targetServerName == null || targetServerName.isEmpty()) {
-            return false;
+            return null;
         }
-        JumpWarpBlock jumpWarpBlock = new JumpWarpBlock(plugin, warpName, creator.getLocation().toBlockLocation(), targetServerName);
-        jumpWarps.put(warpName, jumpWarpBlock);
-        plugin.getConfig().set(warpName + ".World", creator.getWorld().getName());
-        plugin.getConfig().set(warpName + ".X", jumpWarpBlock.getX());
-        plugin.getConfig().set(warpName + ".Y", jumpWarpBlock.getY());
-        plugin.getConfig().set(warpName + ".Z", jumpWarpBlock.getZ());
-        plugin.getConfig().set(warpName + ".TargetServer", jumpWarpBlock.getTargetServerName());
-        plugin.saveConfig();
-        return true;
-    }
-
-    /**
-     * Removes the specified jumpwarp from the JumpWarps HashMap and the config file.
-     * @param warpName The name of the jumpwarp to remove.
-     */
-    public void deleteJumpWarp(String warpName) {
-        if (warpName == null || warpName.isEmpty()) {
-            return;
-        }
-        jumpWarps.remove(warpName);
-        plugin.getConfig().set(warpName, null);
-        plugin.saveConfig();
-    }
-
-    /**
-     * Loads all jump warps from the config file.
-     */
-    public void loadJumpWarps() {
-        jumpWarps.clear();
-        for (String warpName : plugin.getConfig().getKeys(false)) {
-            String worldName = plugin.getConfig().getString(warpName + ".World");
-            int x = plugin.getConfig().getInt(warpName + ".X");
-            int y = plugin.getConfig().getInt(warpName + ".Y");
-            int z = plugin.getConfig().getInt(warpName + ".Z");
-            String targetServerName = plugin.getConfig().getString(warpName + ".TargetServer");
-            JumpWarpBlock jumpWarpBlock = null;
-            if (worldName != null) {
-                jumpWarpBlock = new JumpWarpBlock(plugin, warpName,
-                         new Location(plugin.getServer().getWorld(worldName), x, y, z).toBlockLocation(),
-                        targetServerName);
-            }
-            jumpWarps.put(warpName, jumpWarpBlock);
-        }
-    }
-
-    /**
-     * Gets the JumpWarpBlock object with the specified name.
-     *
-     * @param warpName The name of the jumpwarp to get.
-     * @return The JumpWarpBlock object with the specified name.
-     */
-    public JumpWarpBlock getJumpWarp(String warpName) {
-        return jumpWarps.get(warpName);
-    }
-
-    /**
-     * Gets the JumpWarps HashMap.
-     *
-     * @return The JumpWarps HashMap.
-     */
-    public Map<String, JumpWarpBlock> getJumpWarps() {
-        return jumpWarps;
+        JumpWarpData jumpWarp = new JumpWarpData(
+                UUID.randomUUID(),
+                warpName,
+                plugin.getCrescentCore().getServerName(),
+                creator.getLocation(),
+                targetServerName
+        );
+        jumpWarp.init();
+        jumpWarp.saveAndSync();
+        return jumpWarp;
     }
 
     /**
@@ -104,13 +54,49 @@ public class JumpWarpManager {
      * @return The JumpWarpBlock object that the player is standing on,
      * or null if no jumpwarp is found.
      */
-    public JumpWarpBlock getJumpWarpAtLocation(Location location) {
-        for (JumpWarpBlock jumpWarpBlock : getJumpWarps().values()) {
-            if (VectorUtils.isInSameBlockLocation(location, jumpWarpBlock.getLocation())) {
-                return jumpWarpBlock;
+    @Nullable public JumpWarpData getJumpWarpAtLocation(Location location) {
+        // Loop through all JumpWarpData
+        for (JumpWarpData jumpWarp : getAllData(true)) {
+            if (VectorUtils.isInSameBlockLocation(location, jumpWarp.getLocation())) {
+                return jumpWarp;
             }
         }
         return null;
     }
 
+    /**
+     * Checks if a jumpwarp with the specified name exists.
+     * @param warpName The name of the jumpwarp.
+     * @return True if the jumpwarp exists, false otherwise.
+     */
+    public boolean doesJumpWarpExist(String warpName) {
+        return getJumpWarpByName(warpName) != null;
+    }
+
+    /**
+     * Checks if a server destination exists.
+     * @param serverDestination The name of the server destination.
+     * @return True if the server destination exists, false otherwise.
+     */
+    public boolean doesServerDestinationExist(String serverDestination) {
+        return plugin.getCrescentCore().getServerList().contains(serverDestination);
+    }
+
+    public JumpWarpData getJumpWarpByName(String warpName) {
+        for (JumpWarpData jumpWarp : getAllData(false)) {
+            if (jumpWarp.getWarpName().equalsIgnoreCase(warpName)) {
+                return jumpWarp;
+            }
+        }
+        return null;
+    }
+
+    public boolean deleteJumpWarp(String warpName) {
+        JumpWarpData jumpWarp = getJumpWarpByName(warpName);
+        if (jumpWarp != null) {
+            jumpWarp.deleteAndSync();
+            return true;
+        }
+        return false;
+    }
 }

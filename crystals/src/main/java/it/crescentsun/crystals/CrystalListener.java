@@ -2,6 +2,7 @@ package it.crescentsun.crystals;
 
 import it.crescentsun.artifacts.api.ArtifactUtil;
 import it.crescentsun.crescentcore.CrescentCore;
+import it.crescentsun.crescentcore.api.event.server.ServerLoadPostDBSetupEvent;
 import it.crescentsun.crystals.artifact.CrystalArtifact;
 import io.papermc.paper.advancement.AdvancementDisplay;
 import org.bukkit.entity.Item;
@@ -41,16 +42,11 @@ public class CrystalListener implements Listener {
         if (!(ArtifactUtil.identifyArtifact(stack) instanceof CrystalArtifact crystalArtifact)) {
             return;
         }
-        Integer id = stack.getItemMeta().getPersistentDataContainer().get(CrystalArtifact.CRYSTAL_ID, PersistentDataType.INTEGER);
-        if (id == null) {
-            return;
-        }
-        CompletableFuture<Integer> crystalsGenerated = CrescentCore.getInstance().getDatabaseManager().getServerDataManager().getCrystalsGenerated();
-        crystalsGenerated.thenAcceptAsync(crystals -> {
-            if (crystals >= id) {
-                stack.setAmount(0);
-            }
-        });
+    }
+
+    @EventHandler
+    public void onServerLoadPostDB(ServerLoadPostDBSetupEvent event) { //TODO test singleton
+        plugin.setCrystalsData(plugin.getCrescentCore().getPluginDataRepository().getData(CrystalsData.class, CrystalsData.UUID));
     }
 
 }

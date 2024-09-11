@@ -21,27 +21,34 @@ import java.util.UUID;
 public abstract class PluginData {
 
     protected static final CrescentCore crescentCore = CrescentCore.getInstance();
-
+    protected boolean initialized = false;
 
     protected PluginData() {
         // Check that any subclass is annotated with @DatabaseTable
         if (!this.getClass().isAnnotationPresent(DatabaseTable.class)) { //TODO test
             throw new IllegalStateException("Plugin data class " + this.getClass().getName() + " should be annotated with @DatabaseTable!");
         }
+        // Register the subclass with the serializer if not already registered
     }
 
     public abstract UUID getUuid();
 
     /**
-     * Initializes the data instance. This method should be overridden in the subclass to perform any additional necessary initialization. <br>
-     * <b>IMPORTANT: Only ever call this method for instances that are to be used in the current server, as this method should be used to
-     * initialize elements that are server-specific.</b>
+     * Attempts to initialize the data instance. This method should be overridden in the subclass to perform any additional necessary initialization. <br>
+     * <b>IMPORTANT: Whether this instance gets initialized or not SHOULD depend on the subclass' implementation of {@link #shouldInit()}</b>.
+     * Call that before calling this method.
      */
     public void init() {
+        initialized = true;
         if (crescentCore.getPluginDataRepository().getData(this.getClass(), getUuid()) == null) {
             crescentCore.getPluginDataRepository().addDataInstance(this.getClass(), getUuid(), this);
         }
     }
+
+    /**
+     * This method should be overridden in the subclass to determine whether the data instance should be initialized.
+     */
+    public abstract boolean shouldInit();
 
     /**
      * Saves this PluginData instance to the database (asynchronously), to then be synced with other servers' repositories.
@@ -49,33 +56,34 @@ public abstract class PluginData {
      * @return Whether the data was saved and synced successfully.
      */
     public boolean saveAndSync() {
-        // Async save data
-        return crescentCore.getPluginDataManager().asyncSaveData(this).exceptionally(throwable -> {
+        return crescentCore.getPluginDBManager().asyncSaveData(this).exceptionally(throwable -> {
             crescentCore.getLogger().warning("Failed to save data: " + throwable.getMessage());
             return null;
-        }).join() != null;
-        /*Sender send = crescentCore.getCrescentSunConnection().send(crescentCore.getObjectSerializer().serialize(this));
-        return send.isSuccess();*/
+        }).thenApplyAsync(pluginData -> {
+            Sender send = crescentCore.getCrescentSunConnection().send(CrescentCore.PLUGIN_DATA_REGISTRY.getPluginDataSerializer().serialize(this));
+            return send.isSuccess();
+        }).join();
     }
 
-    public boolean delete() {
+    public boolean deleteAndSync() {
         // Async delete the data and handle errors
-        return crescentCore.getPluginDataManager().asyncDeleteData(this.getClass(), getUuid()).exceptionally(throwable -> {
-            crescentCore.getLogger().warning("Failed to delete data: " + throwable.getMessage());
+        PluginData pluginData = crescentCore.getPluginDataRepository().removeData(this.getClass(), getUuid());
+        if (pluginData != null ) {
+            return crescentCore.getPluginDBManager().asyncDeleteData(this.getClass(), getUuid()).exceptionally(throwable -> {
+                crescentCore.getLogger().warning("Failed to delete data from database: " + throwable.getMessage());
+                crescentCore.getPluginDataRepository().addDataInstance(this.getClass(), getUuid(), pluginData);
+                return false;
+            }).thenApplyAsync(success -> {
+                Sender send = crescentCore.getCrescentSunConnection().send(CrescentCore.PLUGIN_DATA_REGISTRY.getPluginDataSerializer().serialize(new PluginDataIdentifier(getClass(), getUuid())));
+                return send.isSuccess();
+            }).join(); // Wait for the async operation to complete
+        } else {
+            crescentCore.getLogger().warning("Failed to delete data from repository.");
             return false;
-        }).thenApplyAsync(success -> {
-            // Only proceed to remove data from the repository if the deletion was successful
-            if (success) {
-                PluginData pluginData = crescentCore.getPluginDataRepository().removeData(this.getClass(), getUuid());
-                if (pluginData == null) {
-                    crescentCore.getLogger().warning("Failed to remove data from repository: " + getUuid());
-                    return false;
-                }
-                return true;
-            } else {
-                return false; // Deletion failed, no need to remove from repository
-            }
-        }).join(); // Wait for the async operation to complete
+        }
     }
 
+    public boolean isInitialized() {
+        return initialized;
+    }
 }

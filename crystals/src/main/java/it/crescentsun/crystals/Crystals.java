@@ -3,6 +3,11 @@ package it.crescentsun.crystals;
 import it.crescentsun.artifacts.api.ArtifactFactory;
 import it.crescentsun.artifacts.item.ArtifactFlag;
 import it.crescentsun.crescentcore.CrescentCore;
+import it.crescentsun.crescentcore.api.crystals.CrystalSpawnAnimation;
+import it.crescentsun.crescentcore.api.crystals.event.CrystalSource;
+import it.crescentsun.crescentcore.api.crystals.event.GenerateCrystalsEvent;
+import it.crescentsun.crescentcore.api.data.DataType;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
 import it.crescentsun.crystals.artifact.CrystalArtifact;
 import it.crescentsun.crystals.artifact.CrystalixArtifact;
@@ -11,12 +16,8 @@ import it.crescentsun.crystals.crystalix.listener.PlayerListener;
 import it.crescentsun.crescentcore.api.CrystalsProvider;
 import it.crescentsun.crescentcore.api.SoundEffect;
 import it.crescentsun.crescentcore.api.VectorUtils;
-import it.crescentsun.crescentcore.api.event.crystals.CrystalGenerationSource;
-import it.crescentsun.crescentcore.api.event.crystals.GenerateCrystalsEvent;
 import it.crescentsun.crescentcore.api.registry.ArtifactNamespaceKeys;
 import it.crescentsun.crescentcore.cmd.bukkit.BukkitCommandManager;
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
-import it.crescentsun.crescentcore.plugindata.DataType;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Item;
@@ -27,6 +28,7 @@ import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,19 +37,18 @@ public final class Crystals extends JavaPlugin implements CrystalsProvider {
     private final CrystalixManager crystalixManager = new CrystalixManager(this);
     public static final String PLUGIN_KEY = "crystals";
     private static Crystals instance;
-    private final ConfigProvider configProvider = new ConfigProvider(this);
+    private CrystalsData crystalsData;
     @Override
     public void onEnable() {
         instance = this;
         getCrescentCore().setCrystalsProvider(this);
-        saveDefaultConfig();
-        configProvider.loadFromConfig();
         BukkitCommandManager<CommandSender> commandManager = BukkitCommandManager.create(this);
         commandManager.registerCommand(new CrystalsCommands(this));
         Bukkit.getPluginManager().registerEvents(new PlayerListener(this), this);
         registerArtifacts();
-        CrescentCore.PLAYER_DATA_REGISTRY.registerPluginData(CrescentNamespaceKeys.CRYSTALS_AMOUNT, DataType.INT,0);
-        CrescentCore.PLAYER_DATA_REGISTRY.registerPluginData(CrescentNamespaceKeys.SETTINGS_SHOW_CRYSTALIX, DataType.BOOLEAN, true);
+        CrescentCore.PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT, DataType.INT,0);
+
+        CrescentCore.PLUGIN_DATA_REGISTRY.registerDataClass(this, CrystalsData.class);
     }
 
     private void registerArtifacts() {
@@ -86,12 +87,9 @@ public final class Crystals extends JavaPlugin implements CrystalsProvider {
     public static NamespacedKey createKey(String key) {
         return new NamespacedKey(PLUGIN_KEY, key);
     }
-    public ConfigProvider getConfigProvider() {
-        return configProvider;
-    }
 
     @Override
-    public void spawnCrystals(Player player, int amount, CrystalGenerationSource source) {
+    public void spawnCrystals(Player player, int amount, CrystalSource source, CrystalSpawnAnimation spawnAnimation) {
         if (amount > 64) {
             getLogger().warning("Tried to spawn more than 64 crystals at once. Amount was capped at 64.");
             amount = 64;
@@ -193,89 +191,60 @@ public final class Crystals extends JavaPlugin implements CrystalsProvider {
     }
 
     @Override
-    public void addCrystals(Player player, int amount) {
-        PlayerData playerData = getCrescentCore().getPlayerManager().getData(player.getUniqueId());
-        int crystals = playerData.getData(CrescentNamespaceKeys.CRYSTALS_AMOUNT);
-        playerData.updateData(CrescentNamespaceKeys.CRYSTALS_AMOUNT, crystals + amount);
+    public void addCrystals(Player player, int amount, CrystalSource source) {
+        PlayerData playerData = getCrescentCore().getPlayerDataManager().getData(player.getUniqueId());
+        int crystals = playerData.getDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT);
+        playerData.updateDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT, crystals + amount);
+        switch (source) {
+            default:
+                getCrystalsData().setCrystalsGenerated(getCrystalsData().getCrystalsGenerated() + amount);
+                break;
+            case
+        }
         getLogger().info("Added " + amount + " crystals to " + player.getName());
     }
 
     @Override
-    public void setCrystals(Player player, int amount) {
-        PlayerData playerData = getCrescentCore().getPlayerManager().getData(player.getUniqueId());
-        playerData.updateData(CrescentNamespaceKeys.CRYSTALS_AMOUNT, amount);
+    public void setCrystals(Player player, int amount, CrystalSource source) {
+        PlayerData playerData = getCrescentCore().getPlayerDataManager().getData(player.getUniqueId());
+        int oldCrystalAmount = playerData.getDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT);
+        playerData.updateDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT, amount);
+        int difference = amount - oldCrystalAmount;
+        if (difference > 0) {
+            getCrystalsData().setCrystalsGenerated(getCrystalsData().getCrystalsGenerated() + difference);
+        } else {
+            getCrystalsData().setCrystalsLost(getCrystalsData().getCrystalsLost() + Math.abs(difference);
+        }
         getLogger().info("Set " + player.getName() + "'s crystals to " + amount);
     }
 
     @Override
-    public void removeCrystals(Player player, int i) {
-        PlayerData playerData = getCrescentCore().getPlayerManager().getData(player.getUniqueId());
-        int crystals = playerData.getData(CrescentNamespaceKeys.CRYSTALS_AMOUNT);
-        playerData.updateData(CrescentNamespaceKeys.CRYSTALS_AMOUNT, Math.max(0, crystals - i));
-        getLogger().info("Removed " + i + " crystals from " + player.getName());
+    public void removeCrystals(Player player, int amount, CrystalSource source) {
+        PlayerData playerData = getCrescentCore().getPlayerDataManager().getData(player.getUniqueId());
+        int crystals = playerData.getDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT);
+        playerData.updateDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT, Math.max(0, crystals - amount));
+        if (Objects.requireNonNull(source) == CrystalSource.SALE) {
+            getCrystalsData().setCrystalsSpent(getCrystalsData().getCrystalsSpent() + amount);
+        } else {
+            getCrystalsData().setCrystalsLost(getCrystalsData().getCrystalsLost() + amount);
+        }
+        getLogger().info("Removed " + amount + " crystals from " + player.getName());
     }
 
     @Override
     public int getCrystals(Player player) {
-        return getCrescentCore().getPlayerManager().getData(player.getUniqueId()).getData(CrescentNamespaceKeys.CRYSTALS_AMOUNT);
+        return getCrescentCore().getPlayerDataManager().getData(player.getUniqueId()).getDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT);
     }
 
-    public static void spawnCrystalOld(Player player, int amount) {
-        List<Item> crystals = new ArrayList<>();
-        AtomicInteger counter = new AtomicInteger();
-        Location spawnLocation = player.getLocation().clone();
-        final Location targetLocation = spawnLocation.clone().add(0, 3, 0); // Target location with Y offset
-
-        Bukkit.getScheduler().runTaskTimer(Crystals.getInstance(), outerTask -> {
-            if (counter.getAndIncrement() < amount) {
-                Item crystal = player.getWorld().dropItem(spawnLocation, ArtifactFactory.getItem(ArtifactNamespaceKeys.CRYSTAL, 1));
-                crystal.setCanPlayerPickup(false);
-                crystal.setGravity(false);
-                crystal.setVelocity(new Vector(0, 0, 0));
-                crystals.add(crystal);
-
-                Bukkit.getScheduler().runTaskTimer(Crystals.getInstance(), innerTask -> {
-                    if (!crystals.contains(crystal)) {
-                        innerTask.cancel();
-                        return;
-                    }
-
-                    long timeAlive = crystal.getTicksLived();
-                    double distanceY = targetLocation.getY() - crystal.getLocation().getY();
-                    // Adjust spiral radius based on distance to target, considering X, Y, and Z.
-                    double radius = Math.max(0.1, Math.sqrt(crystal.getLocation().distanceSquared(targetLocation)) / 40);
-
-                    double angle = Math.toRadians((double) timeAlive * 5); // Adjust rotation speed here
-                    double dx = radius * Math.cos(angle);
-                    double dz = radius * Math.sin(angle);
-                    double dy = 0.05; // Adjust upward motion speed here to ensure it reaches the target
-
-                    Vector velocity = new Vector(dx, dy, dz);
-                    crystal.setVelocity(velocity);
-
-                    // Check if the crystal has reached the target location, considering X, Y, and Z.
-                    if (crystal.getLocation().distance(targetLocation) <= 0.5) { // Consider a small threshold to allow for convergence
-                        crystal.setGravity(true);
-                        crystal.setVelocity(new Vector(0, 0.1, 0)); // Gentle drop
-                        crystal.setOwner(player.getUniqueId());
-                        crystal.setCanPlayerPickup(true);
-                        crystal.setPickupDelay(20);
-                        innerTask.cancel();
-                    }
-
-                }, 0, 1); // Start immediately, repeat every tick
-            }
-            if (crystals.size() >= amount) {
-                outerTask.cancel(); // Cancel the spawning task once the desired amount is reached
-            }
-        }, 0, 10); // Initial spawn delay and period between spawns.
+    public CrystalsData getCrystalsData() {
+        return crystalsData;
     }
 
-
-
-
-
-
-
-
+    public void setCrystalsData(CrystalsData crystalsData) {
+        if (this.crystalsData == null) {
+            this.crystalsData = crystalsData;
+        } else {
+            getLogger().warning("Attempted overwriting of CrystalsData object. Ignoring.");
+        }
+    }
 }

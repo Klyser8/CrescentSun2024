@@ -5,7 +5,7 @@ import com.google.common.io.ByteStreams;
 import it.crescentsun.crescentcore.CrescentCore;
 import it.crescentsun.crescentcore.api.data.plugin.PluginData;
 import it.crescentsun.crescentcore.api.data.plugin.PluginDataRepository;
-import it.crescentsun.crescentcore.core.BungeeConstants;
+import it.crescentsun.crescentcore.core.network.BungeeConstants;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
@@ -35,7 +35,7 @@ public class BungeeListener implements PluginMessageListener {
                 String contents = in.readUTF();
                 String tableName = contents.split(":")[0];
                 String uuidString = contents.split(":")[1];
-                CompletableFuture<Boolean> booleanCompletableFuture = crescentCore.getPluginDataManager()
+                CompletableFuture<Boolean> booleanCompletableFuture = crescentCore.getPluginDBManager()
                         .asyncLoadData(PluginDataRepository.getPluginDataClassFromFullTableName(tableName), UUID.fromString(uuidString));
                 booleanCompletableFuture.thenAcceptAsync(success -> {
                     if (success) {

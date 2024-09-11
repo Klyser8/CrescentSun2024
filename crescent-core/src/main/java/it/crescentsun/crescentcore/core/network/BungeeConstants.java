@@ -1,4 +1,4 @@
-package it.crescentsun.crescentcore.core;
+package it.crescentsun.crescentcore.core.network;
 
 public class BungeeConstants {
 

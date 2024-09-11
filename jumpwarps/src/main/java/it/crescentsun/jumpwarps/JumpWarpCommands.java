@@ -9,12 +9,11 @@ import it.crescentsun.crescentcore.cmd.core.annotation.SubCommand;
 import it.crescentsun.crescentmsg.api.MessageFormatter;
 import it.crescentsun.crescentmsg.api.MessageType;
 import it.crescentsun.jumpwarps.lang.JumpWarpLocalization;
-import net.kyori.adventure.text.Component;
+import it.crescentsun.jumpwarps.warphandling.JumpWarpData;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 

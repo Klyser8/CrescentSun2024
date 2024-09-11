@@ -1,5 +1,6 @@
 package it.crescentsun.crescentcore.api;
 
+import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
 import java.util.ArrayList;
@@ -40,6 +41,27 @@ public class EntityUtils {
             }
         }
         entity.remove();
+    }
+
+    /**
+     * Returns a safe location underneath the given entity. May be null if no safe location is found.
+     * A location is considered safe if the block underneath the location is solid and the block itself is empty.
+     *
+     * @param entity the entity to find a safe location underneath
+     * @return a safe location underneath the entity, or null if no safe location is found
+     */
+    public static Location getSafeLocationUnderneath(Entity entity) {
+        for (int y = (int) entity.getY(); y > -64; y--) {
+            if (!entity.getWorld().getBlockAt((int) entity.getX(), y, (int) entity.getZ()).isEmpty()) { // If the block being checked is not empty, continue
+                continue;
+            }
+            if (!entity.getWorld().getBlockAt((int) entity.getX(), y - 1, (int) entity.getZ()).isSolid()) { // If the block underneath the block being checked is not solid, continue
+                continue;
+            }
+            // As the block being checked is empty and the block underneath is solid, this location should be safe.
+            return new Location(entity.getWorld(), entity.getX(), y, entity.getZ());
+        }
+        return null;
     }
 
 }

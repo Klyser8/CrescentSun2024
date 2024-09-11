@@ -27,9 +27,12 @@ public class JumpWarpLocalization {
     public static final TranslatableMessage LIST_TITLE_SERVER = new TranslatableMessage();
     public static final TranslatableMessage LIST_HEADER_SERVER = new TranslatableMessage();
     public static final TranslatableMessage LIST_ROW_SERVER = new TranslatableMessage();
+
     public static final TranslatableMessage LIST_TITLE_NETWORK = new TranslatableMessage();
     public static final TranslatableMessage LIST_HEADER_NETWORK = new TranslatableMessage();
     public static final TranslatableMessage LIST_ROW_NETWORK = new TranslatableMessage();
+
+    public static final TranslatableMessage NO_SAFE_LOCATION_FOUND = new TranslatableMessage();
 
     public void registerEnglishTranslations() {
         UNKNOWN_USAGE.addTranslation(
@@ -128,6 +131,11 @@ public class JumpWarpLocalization {
                         "<@white>%s, %s, %s, %s</@> | " +
                         "<@white>%s</@>"));
 
+        NO_SAFE_LOCATION_FOUND.addTranslation(
+                Locale.US,
+                Component.text("<@aqua>Couldn't find a safe location to bring you back to. You've been teleported to your</@>" +
+                        "<@white> spawn point</@>" +
+                        "<@aqua>.</@>"));
     }
 
     public void registerItalianTranslations() {
@@ -215,6 +223,12 @@ public class JumpWarpLocalization {
                     "<@white>[%s] %s </@>" +
                     "<@aqua>(%s, %s, %s, %s) -> </@>" +
                     "<@white>[%s]</@>"));
-}
+
+    NO_SAFE_LOCATION_FOUND.addTranslation(
+            Locale.ITALY,
+            Component.text("<@aqua>Non è stato possibile trovare una posizione sicura per riportarti in questo server. Sei stato teletrasportato al tuo</@>" +
+                    "<@white> punto di spawn</@>" +
+                    "<@aqua>.</@>"));
+    }
 
 }

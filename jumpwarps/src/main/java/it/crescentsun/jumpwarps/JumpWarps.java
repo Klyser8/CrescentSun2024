@@ -6,6 +6,8 @@ import com.google.common.io.ByteStreams;
 import it.crescentsun.crescentcore.CrescentCore;
 import it.crescentsun.crescentcore.cmd.bukkit.BukkitCommandManager;
 import it.crescentsun.jumpwarps.lang.JumpWarpLocalization;
+import it.crescentsun.jumpwarps.warphandling.JumpListener;
+import it.crescentsun.jumpwarps.warphandling.JumpWarpData;
 import it.crescentsun.jumpwarps.warphandling.JumpWarpManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;

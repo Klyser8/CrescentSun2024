@@ -1,6 +1,5 @@
 package it.crescentsun.crescentcore.core.lang;
 
-import it.crescentsun.crescentmsg.api.MessageType;
 import it.crescentsun.crescentmsg.api.lang.TranslatableMessage;
 import net.kyori.adventure.text.Component;
 
@@ -17,8 +16,10 @@ public class CrescentCoreLocalization {
     public static final TranslatableMessage GENERIC_SPECIFY_SERVER_NAME = new TranslatableMessage();
     public static final TranslatableMessage GENERIC_ALREADY_CONNECTED_TO_SERVER = new TranslatableMessage();
 
+
     public static final TranslatableMessage GENERIC_AWAIT_TELEPORTATION = new TranslatableMessage();
     public static final TranslatableMessage GENERIC_TELEPORTATION_CANCELLED = new TranslatableMessage();
+    public static final TranslatableMessage GENERIC_TELEPORTATION_FAILURE = new TranslatableMessage();
 
     public static final TranslatableMessage SAVING_PLAYER_DATA = new TranslatableMessage();
     public static final TranslatableMessage SAVING_PLAYER_DATA_SUCCESS = new TranslatableMessage();
@@ -54,6 +55,12 @@ public class CrescentCoreLocalization {
         GENERIC_TELEPORTATION_CANCELLED.addTranslation(
                 Locale.US,
                 Component.text("<@red>Teleportation cancelled.</@>")
+        );
+        GENERIC_TELEPORTATION_FAILURE.addTranslation(
+                Locale.US,
+                Component.text("<@red>Failed to teleport to</@>" +
+                        " <@salmon>%s</@>" +
+                        "<@red>!</@>")
         );
         SAVING_PLAYER_DATA.addTranslation(
                 Locale.US,
@@ -105,6 +112,12 @@ public class CrescentCoreLocalization {
         GENERIC_TELEPORTATION_CANCELLED.addTranslation(
                 Locale.ITALY,
                 Component.text("<@red>Teletrasporto annullato.</@>")
+        );
+        GENERIC_TELEPORTATION_FAILURE.addTranslation(
+                Locale.ITALY,
+                Component.text("<@red>Impossibile teletrasportarsi a</@>" +
+                        " <@salmon>%s</@>" +
+                        "<@red>!</@>")
         );
         SAVING_PLAYER_DATA.addTranslation(
                 Locale.ITALY,

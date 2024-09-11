@@ -1,15 +1,15 @@
-package it.crescentsun.jumpwarps;
+package it.crescentsun.jumpwarps.warphandling;
 
 import it.crescentsun.crescentcore.api.data.DataType;
 import it.crescentsun.crescentcore.api.data.plugin.DatabaseColumn;
 import it.crescentsun.crescentcore.api.data.plugin.DatabaseTable;
 import it.crescentsun.crescentcore.api.data.plugin.PluginData;
-import it.crescentsun.jumpwarps.warphandling.JumpWarpScheduledTask;
+import it.crescentsun.jumpwarps.JumpWarps;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
-import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -105,7 +105,7 @@ public class JumpWarpData extends PluginData {
     public Location getLocation() {
         World world = Bukkit.getWorld(worldUUID);
         if (world == null) {
-//            crescentCore.getLogger().warning("World with UUID " + worldUUID + " not found while trying to fetch location for JumpWarpData " + this);FIXME: This gets called at every. single. jump.
+            crescentCore.getLogger().warning("World with UUID " + worldUUID + " not found while trying to fetch location for JumpWarpData " + this);
         }
         return new Location(world, x, y, z);
     }
@@ -185,5 +185,22 @@ public class JumpWarpData extends PluginData {
                 ", z=" + z +
                 ", destinationServer='" + destinationServer + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        }
+        if (obj == null || obj.getClass() != this.getClass()) {
+            return false;
+        }
+        JumpWarpData jumpWarp = (JumpWarpData) obj;
+        return jumpWarp.getUuid().equals(uuid);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(uuid);
     }
 }

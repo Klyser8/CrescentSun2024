@@ -1,5 +1,6 @@
 package it.crescentsun.jumpwarps;
 
+import it.crescentsun.jumpwarps.warphandling.JumpWarpData;
 import org.bukkit.Location;
 
 public class JumpWarpUtil {

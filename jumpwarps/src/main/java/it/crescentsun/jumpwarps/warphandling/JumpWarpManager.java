@@ -2,11 +2,8 @@ package it.crescentsun.jumpwarps.warphandling;
 
 import it.crescentsun.crescentcore.api.VectorUtils;
 import it.crescentsun.crescentcore.api.data.plugin.AbstractPluginDataManager;
-import it.crescentsun.crescentcore.api.data.plugin.PluginData;
-import it.crescentsun.jumpwarps.JumpWarpData;
 import it.crescentsun.jumpwarps.JumpWarps;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,6 +14,7 @@ import java.util.*;
  */
 public class JumpWarpManager extends AbstractPluginDataManager<JumpWarps, JumpWarpData> {
 
+    private final Map<Player, PlayerJumpWarpBufferEntry> bufferedPlayers = new HashMap<>();
     public JumpWarpManager(JumpWarps plugin) {
         super(plugin, JumpWarpData.class);
     }
@@ -65,6 +63,24 @@ public class JumpWarpManager extends AbstractPluginDataManager<JumpWarps, JumpWa
     }
 
     /**
+     * Gets the closest jumpwarp to the specified location. May be null if none is found in the world.
+     * @param location The location to check.
+     * @return The closest jumpwarp to the location, or null if none is found.
+     */
+    @Nullable public JumpWarpData getClosestJumpWarp(Location location) {
+        JumpWarpData closestJumpWarp = null;
+        double closestDistance = Double.MAX_VALUE;
+        for (JumpWarpData jumpWarp : getAllData(true)) {
+            double distance = location.distanceSquared(jumpWarp.getLocation());
+            if (distance < closestDistance) {
+                closestJumpWarp = jumpWarp;
+                closestDistance = distance;
+            }
+        }
+        return closestJumpWarp;
+    }
+
+    /**
      * Checks if a jumpwarp with the specified name exists.
      * @param warpName The name of the jumpwarp.
      * @return True if the jumpwarp exists, false otherwise.
@@ -99,4 +115,11 @@ public class JumpWarpManager extends AbstractPluginDataManager<JumpWarps, JumpWa
         }
         return false;
     }
+
+    protected Map<Player, PlayerJumpWarpBufferEntry> getJumpWarpBuffer() {
+        return bufferedPlayers;
+    }
+
+
+    record PlayerJumpWarpBufferEntry(JumpWarpData jumpWarp, Long time) { }
 }

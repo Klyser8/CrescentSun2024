@@ -2,15 +2,19 @@ package it.crescentsun.crescentcore.api;
 
 import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.CrescentCore;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.UUID;
 
 public class PlayerUtils {
@@ -71,6 +75,27 @@ public class PlayerUtils {
             player.swingHand(hand);
         }
         return droppedItem;
+    }
+    /**
+     * Checks if a player is on the ground.
+     * As the paper provided method {@link Player#isOnGround()} isn't reliable due to spoofing risks, this method
+     * uses raytracing to check if the player's got a block 1/16th of a block underneath them.
+     *
+     * @param player The player to check.
+     * @return Whether the player is on the ground or not.
+     */
+    public static boolean isOnGround(Player player) {
+        // Using raytracing, check the first block hit underneath.
+        World world = player.getWorld();
+        RayTraceResult rayTraceResult = world.rayTraceBlocks(
+                player.getLocation(),
+                new Vector(0, -1, 0),
+                1.0,
+                FluidCollisionMode.NEVER,
+                true
+        );
+        boolean isOnGround = rayTraceResult != null && rayTraceResult.getHitBlock() != null;
+        return isOnGround;
     }
 
 }

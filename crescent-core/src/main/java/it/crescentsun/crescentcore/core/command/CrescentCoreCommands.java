@@ -52,8 +52,17 @@ public class CrescentCoreCommands extends BaseCommand {
             sender.sendMessage(CrescentCoreLocalization.GENERIC_ALREADY_CONNECTED_TO_SERVER.getFormattedMessage(player.locale(), serverName));
             return;
         }
-        BungeeUtils.saveDataAndSendPlayerToServer(
-                crescentCore, crescentCore, player, serverName);
+        crescentCore.getPlayerDBManager().asyncSaveData(player.getUniqueId()).thenApplyAsync(playerData -> {
+            if (playerData != null) {
+                BungeeUtils.sendPlayerToServer(
+                        crescentCore, player, serverName);
+                return playerData;
+            } else {
+                sender.sendMessage(CrescentCoreLocalization.GENERIC_TELEPORTATION_FAILURE.getFormattedMessage(player.locale(), serverName));
+                return null;
+            }
+        });
+
         sender.sendMessage(CrescentCoreLocalization.GENERIC_AWAIT_TELEPORTATION.getFormattedMessage(player.locale(), serverName));
     }
 

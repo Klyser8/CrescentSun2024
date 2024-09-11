@@ -25,6 +25,7 @@ import org.bukkit.event.player.PlayerRegisterChannelEvent;
 import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 import java.sql.Timestamp;
 import java.util.Objects;
@@ -49,7 +50,6 @@ public class CrescentCoreListener implements Listener {
             }, 20);
         }
         loadPlayerDataAsync(player);
-
         player.addPotionEffect(new PotionEffect(
                 PotionEffectType.BLINDNESS, 50, 0, false, false));
     }
@@ -74,7 +74,7 @@ public class CrescentCoreListener implements Listener {
         });
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerRegisterChannelEvent(PlayerRegisterChannelEvent event) {
         if (event.getChannel().equals("BungeeCord")) {
             Bukkit.getScheduler().runTaskLater(crescentCore, () -> {
@@ -88,15 +88,15 @@ public class CrescentCoreListener implements Listener {
                 });
                 // Notify the console of the player's join
                 Bukkit.getConsoleSender().sendMessage(CrescentCoreLocalization.SERVER_JOIN_MESSAGE_OTHER.getFormattedMessage(null, player.getName()));
-
-                // If the server is lobby, teleport the player to the world spawn.
-                if (crescentCore.getServerName().contains("lobby")) {
-                    player.teleport(Objects.requireNonNull(Bukkit.getWorld("world")).getSpawnLocation());
-                    for (PotionEffect effect : player.getActivePotionEffects()) {
-                        player.removePotionEffect(effect.getType());
-                    }
-                }
             }, 5);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerSpawnPostJoin(PlayerSpawnLocationEvent event) {
+        if (crescentCore.getServerName().contains("lobby")) {
+            //noinspection DataFlowIssue
+            event.setSpawnLocation(Bukkit.getWorld("world").getSpawnLocation());
         }
     }
 
@@ -125,7 +125,7 @@ public class CrescentCoreListener implements Listener {
         });
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onServerLoad(ServerLoadEvent event) {
         PlayerDataRegistry.freezeRegistries();
         PluginDataRegistry.freezeRegistries();
@@ -140,7 +140,7 @@ public class CrescentCoreListener implements Listener {
         Bukkit.getPluginManager().callEvent(dbSetupEvent);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onProtoWeaverConnectionEstablished(ProtoweaverConnectionEstablishedEvent event) {
         // After loading all jumpwarps, initialize them.
         for (PluginData pluginData : crescentCore.getPluginDataRepository().getAllData().values()) {
@@ -150,7 +150,7 @@ public class CrescentCoreListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerChat(AsyncChatEvent event) {
         if (!(event.message() instanceof TextComponent textComponent)) {
             return;

@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import java.util.HashMap;
 import java.util.Map;
 
+@Deprecated
 public class CrystalixManager {
 
     private final Crystals plugin;

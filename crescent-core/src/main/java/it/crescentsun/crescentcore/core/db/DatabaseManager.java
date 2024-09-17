@@ -1,12 +1,13 @@
 package it.crescentsun.crescentcore.core.db;
 
 import it.crescentsun.crescentcore.CrescentCore;
+import it.crescentsun.crescentcore.api.PrematureAccessException;
 import it.crescentsun.crescentcore.api.data.DataType;
 import it.crescentsun.crescentcore.api.data.DataEntry;
 import it.crescentsun.crescentcore.api.data.plugin.DatabaseColumn;
 import it.crescentsun.crescentcore.api.data.plugin.PluginData;
 import it.crescentsun.crescentcore.api.data.plugin.PluginDataRepository;
-import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
+import it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.NamespacedKey;
@@ -21,8 +22,8 @@ import static it.crescentsun.crescentcore.CrescentCore.PLUGIN_DATA_REGISTRY;
 public class DatabaseManager {
 
     private final HikariDataSource dataSource;
-    private PlayerDBManager playerDBManager = null;
-    private PluginDBManager pluginDBManager = null;
+    private PlayerDataManager playerDBManager = null;
+    private PluginDataManager pluginDBManager = null;
     private final CrescentCore crescentCore;
     private final List<String> tableNames = new ArrayList<>();
     public DatabaseManager(CrescentCore crescentCore, String host, int port, String database, String username, String password, int maxPoolSize) {
@@ -98,7 +99,7 @@ public class DatabaseManager {
     }
 
     private void addPlayerPrimaryKeyAndColumns(String tableName, StringBuilder columns) {
-        columns.append(CrescentNamespaceKeys.PLAYER_UUID.getKey()).append(" VARCHAR(36) NOT NULL PRIMARY KEY, ");
+        columns.append(CrescentNamespacedKeys.PLAYER_UUID.getKey()).append(" VARCHAR(36) NOT NULL PRIMARY KEY, ");
         Map<NamespacedKey, DataEntry<?>> playerDataRegistry = PLAYER_DATA_ENTRY_REGISTRY.getPlayerDataEntryForNamespace(tableName);
         for (NamespacedKey namespacedKey : playerDataRegistry.keySet()) {
             DataType dataType = playerDataRegistry.get(namespacedKey).getType();
@@ -260,21 +261,27 @@ public class DatabaseManager {
 
     public void initPlayerDataManager() {
         if (playerDBManager == null) {
-            playerDBManager = new PlayerDBManager(crescentCore, this);
+            playerDBManager = new PlayerDataManager(crescentCore, this);
         }
     }
 
     public void initPluginDataManager() {
         if (pluginDBManager == null) {
-            pluginDBManager = new PluginDBManager(crescentCore);
+            pluginDBManager = new PluginDataManager(crescentCore);
         }
     }
 
-    public PlayerDBManager getPlayerDataManager() {
+    public PlayerDataManager getPlayerDataManager() {
+        if (playerDBManager == null) {
+            throw new PrematureAccessException("PlayerDataManager has not been initialized yet! Initialization takes place in the ServerLoadEvent of crescent-core.");
+        }
         return playerDBManager;
     }
 
-    public PluginDBManager getPluginDataManager() {
+    public PluginDataManager getPluginDataManager() {
+        if (pluginDBManager == null) {
+            throw new PrematureAccessException("PluginDataManager has not been initialized yet! Initialization takes place in the ServerLoadEvent of crescent-core.");
+        }
         return pluginDBManager;
     }
 

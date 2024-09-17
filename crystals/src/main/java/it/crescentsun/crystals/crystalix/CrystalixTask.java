@@ -2,9 +2,9 @@ package it.crescentsun.crystals.crystalix;
 
 import it.crescentsun.artifacts.api.ArtifactUtil;
 import it.crescentsun.artifacts.item.Artifact;
-import it.crescentsun.crescentcore.api.VectorUtils;
-import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys;
+import it.crescentsun.crescentcore.api.util.VectorUtils;
 import it.crescentsun.crystals.Crystals;
 import it.crescentsun.crystals.artifact.CrystalArtifact;
 import org.bukkit.Location;
@@ -21,12 +21,13 @@ import org.bukkit.util.Vector;
 import java.util.Random;
 import java.util.function.Consumer;
 
-import static it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys.CRYSTALS_AMOUNT;
+import static it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT;
 
 /**
  * Represents a task to handle Crystalix behavior, including movement, visual effects, and interaction with Crystals.
  * IMPORTANT NOTE: A crystalix will only pick up crystals that have the thrower set to the owner's UUID.
  */
+@Deprecated
 public class CrystalixTask implements Consumer<BukkitTask> {
 
     public static final int INTERVAL = 1;
@@ -70,10 +71,10 @@ public class CrystalixTask implements Consumer<BukkitTask> {
     @Override
     public void accept(BukkitTask bukkitTask) {
         //Remove crystalix if the owner disabled it
-        boolean isCrystalixShowing = ownerData.getData(CrescentNamespaceKeys.SETTINGS_SHOW_CRYSTALIX);
-        if (!isCrystalixShowing) {
-            crystalix.delete();
-        }
+//        boolean isCrystalixShowing = ownerData.getData(CrescentNamespaceKeys.SETTINGS_SHOW_CRYSTALIX);
+//        if (!isCrystalixShowing) {
+//            crystalix.delete();
+//        }
         // Remove crystalix if the owner is offline
         /*if (!owner.isOnline()) {
             crystalix.delete();
@@ -82,7 +83,7 @@ public class CrystalixTask implements Consumer<BukkitTask> {
         if (crystalixItem.isDead()) {
             bukkitTask.cancel();
         }
-        int crystals = ownerData.getData(CRYSTALS_AMOUNT);
+        int crystals = ownerData.getDataValue(PLAYERS_CRYSTAL_AMOUNT);
         if (crystalix.getWrittenCrystals() != crystals) {
             crystalix.updateName();
         }
@@ -103,8 +104,8 @@ public class CrystalixTask implements Consumer<BukkitTask> {
         handlePosition(crystalixItem);
         if (targetCrystal != null) {
             if (targetCrystal.getLocation().distance(crystalixItem.getLocation()) < 1) {
-                plugin.addCrystals(owner, targetCrystal.getItemStack().getAmount());
-                ownerData.updateData(CRYSTALS_AMOUNT, crystals + targetCrystal.getItemStack().getAmount());
+//                plugin.addCrystals(owner, targetCrystal.getItemStack().getAmount());
+                ownerData.updateDataValue(PLAYERS_CRYSTAL_AMOUNT, crystals + targetCrystal.getItemStack().getAmount());
                 targetCrystal.remove();
                 world.playSound(crystalixItem.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2.0f);
                 world.playSound(crystalixItem.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_FALL, 1f, 1.5f);

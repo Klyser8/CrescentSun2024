@@ -1,7 +1,7 @@
 package it.crescentsun.crescentcore.core.command;
 
 import it.crescentsun.crescentcore.CrescentCore;
-import it.crescentsun.crescentcore.api.BungeeUtils;
+import it.crescentsun.crescentcore.api.util.BungeeUtils;
 import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import dev.triumphteam.cmd.bukkit.annotation.Permission;
 import dev.triumphteam.cmd.core.BaseCommand;
@@ -52,7 +52,7 @@ public class CrescentCoreCommands extends BaseCommand {
             sender.sendMessage(CrescentCoreLocalization.GENERIC_ALREADY_CONNECTED_TO_SERVER.getFormattedMessage(player.locale(), serverName));
             return;
         }
-        crescentCore.getPlayerDBManager().asyncSaveData(player.getUniqueId()).thenApplyAsync(playerData -> {
+        crescentCore.getPlayerDataManager().asyncSaveData(player.getUniqueId()).thenApplyAsync(playerData -> {
             if (playerData != null) {
                 BungeeUtils.sendPlayerToServer(
                         crescentCore, player, serverName);
@@ -70,7 +70,7 @@ public class CrescentCoreCommands extends BaseCommand {
     @Permission("crescent.crescentcore.save")
     public void saveCommand(final CommandSender sender) {
         sender.sendMessage(CrescentCoreLocalization.SAVING_PLAYER_DATA.getFormattedMessage(null));
-        CompletableFuture<Map<UUID, PlayerData>> futurePlayerMap = crescentCore.getPlayerDBManager().asyncSaveAllData();
+        CompletableFuture<Map<UUID, PlayerData>> futurePlayerMap = crescentCore.getPlayerDataManager().asyncSaveAllData();
         futurePlayerMap.thenAccept(saveMap -> {
             TextComponent text;
             if (!saveMap.isEmpty()) {
@@ -85,7 +85,7 @@ public class CrescentCoreCommands extends BaseCommand {
     @SubCommand("reload")
     @Permission("crescent.crescentcore.reload")
     public void reloadCommand(final CommandSender sender) {
-        boolean success = crescentCore.getPluginDBManager().reloadAllData();
+        boolean success = crescentCore.getPluginDataManager().reloadAllData();
         if (success) {
             sender.sendMessage(CrescentCoreLocalization.RELOADING_DATA_SUCCESS.getFormattedMessage(null));
         } else {

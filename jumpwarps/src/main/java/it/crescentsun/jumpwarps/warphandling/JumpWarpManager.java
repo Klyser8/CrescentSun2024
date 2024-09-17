@@ -1,7 +1,7 @@
 package it.crescentsun.jumpwarps.warphandling;
 
-import it.crescentsun.crescentcore.api.VectorUtils;
 import it.crescentsun.crescentcore.api.data.plugin.AbstractPluginDataManager;
+import it.crescentsun.crescentcore.api.util.VectorUtils;
 import it.crescentsun.jumpwarps.JumpWarps;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -40,7 +40,7 @@ public class JumpWarpManager extends AbstractPluginDataManager<JumpWarps, JumpWa
                 creator.getLocation(),
                 targetServerName
         );
-        jumpWarp.init();
+        jumpWarp.tryInit();
         jumpWarp.saveAndSync();
         return jumpWarp;
     }
@@ -121,5 +121,5 @@ public class JumpWarpManager extends AbstractPluginDataManager<JumpWarps, JumpWa
     }
 
 
-    record PlayerJumpWarpBufferEntry(JumpWarpData jumpWarp, Long time) { }
+    protected record PlayerJumpWarpBufferEntry(JumpWarpData jumpWarp, Long time) { }
 }

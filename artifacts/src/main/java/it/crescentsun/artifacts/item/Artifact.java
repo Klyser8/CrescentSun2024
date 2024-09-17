@@ -1,6 +1,7 @@
 package it.crescentsun.artifacts.item;
 
-import it.crescentsun.crescentcore.api.SoundEffect;
+import it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys;
+import it.crescentsun.crescentcore.api.util.SoundEffect;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -8,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Item;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
@@ -21,41 +23,44 @@ import java.util.EnumSet;
 import java.util.UUID;
 
 /**
- * This abstract class represents a custom Artifact with its own right click, left click, shift right click,
- * and shift left click functionalities.
- * <p>
+ * This abstract class represents a custom Artifact with its own click functionalities.
+ * <br>
  * Each custom item should extend this class and implement the abstract methods to define their unique behavior.
  */
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public abstract class Artifact {
 
     // The NamespacedKey of the item's UUID. Used to identify unique items.
-    public static final NamespacedKey ITEM_INSTANCE_UUID = new NamespacedKey("artifacts", "uuid");
+    public static final NamespacedKey ITEM_INSTANCE_UUID = new NamespacedKey(CrescentNamespacedKeys.NAMESPACE_ARTIFACTS, "uuid");
     // The NamespacedKey of the item's key. Used to identify the item.
-    public static final NamespacedKey ARTIFACT_KEY = new NamespacedKey("artifacts", "artifact_key");
+    public static final NamespacedKey ARTIFACT_KEY = new NamespacedKey(CrescentNamespacedKeys.NAMESPACE_ARTIFACTS, "artifact_key");
+    // The NamespacedKey of the item's Artifact Flags. Used set or fetch the item's flags.
+    public static final NamespacedKey ARTIFACT_FLAGS = new NamespacedKey(CrescentNamespacedKeys.NAMESPACE_ARTIFACTS, "artifact_flags");
     private static int customModelDataCounter = 1;
 
     protected final String displayName;         // The display name of the item
-    protected final NamespacedKey itemKey;      // The NamespacedKey of the item
+    protected final NamespacedKey namespacedKey;      // The NamespacedKey of the item
     protected final ItemStack defaultStack;     // The default ItemStack of the item. Used for cloning purposes.
     protected final ItemMeta customMeta;        // The custom ItemMeta of the item.
     protected final int customModelData;        // The custom model data of the item. Used for custom textures.
-    protected final EnumSet<ArtifactFlag> flags;       // The ArtifactFlags of the item.
+    protected final EnumSet<ArtifactFlag> defaultFlags;       // The default ArtifactFlags of the item.
 
-
-    protected Artifact(NamespacedKey itemKey, ItemStack defaultStack, String displayName, ArtifactFlag... flags) {
-        this.itemKey = itemKey;
+    protected Artifact(NamespacedKey namespacedKey, ItemStack defaultStack, String displayName, ArtifactFlag... defaultFlags) {
+        this.namespacedKey = namespacedKey;
         this.displayName = displayName;
         this.defaultStack = defaultStack;
         this.customModelData = customModelDataCounter++;
         this.customMeta = defaultStack.getItemMeta();
-        if (flags == null || flags.length == 0) {
-            this.flags = EnumSet.noneOf(ArtifactFlag.class);
+        if (defaultFlags == null || defaultFlags.length == 0) {
+            this.defaultFlags = EnumSet.noneOf(ArtifactFlag.class);
         }
         else {
-            this.flags = EnumSet.copyOf(Arrays.asList(flags));
+            this.defaultFlags = EnumSet.copyOf(Arrays.asList(defaultFlags));
         }
+        int[] flagIDs = this.defaultFlags.stream().mapToInt(ArtifactFlag::getId).toArray();
         //If item is unique, add a UUID to the item's PersistentDataContainer.
-        customMeta.getPersistentDataContainer().set(ARTIFACT_KEY, PersistentDataType.STRING,  itemKey.toString());
+        customMeta.getPersistentDataContainer().set(ARTIFACT_KEY, PersistentDataType.STRING,  namespacedKey.toString());
+        customMeta.getPersistentDataContainer().set(ARTIFACT_FLAGS, PersistentDataType.INTEGER_ARRAY, flagIDs);
         customMeta.setCustomModelData(customModelData);
         defaultStack.setItemMeta(customMeta);
     }
@@ -66,7 +71,7 @@ public abstract class Artifact {
      * @param event The PlayerInteractEvent that triggered this action.
      * @return true if the interaction was successful, false otherwise.
      */
-    public boolean rightClick(PlayerInteractEvent event) {
+    public boolean interactRight(PlayerInteractEvent event) {
         return false;
     }
 
@@ -76,7 +81,7 @@ public abstract class Artifact {
      * @param event The PlayerInteractEvent that triggered this action.
      * @return true if the interaction was successful, false otherwise.
      */
-    public boolean leftClick(PlayerInteractEvent event) {
+    public boolean interactLeft(PlayerInteractEvent event) {
         return false;
     }
 
@@ -86,7 +91,7 @@ public abstract class Artifact {
      * @param event The PlayerInteractEvent that triggered this action.
      * @return true if the interaction was successful, false otherwise.
      */
-    public boolean shiftRightClick(PlayerInteractEvent event) {
+    public boolean interactShiftRight(PlayerInteractEvent event) {
         return false;
     }
 
@@ -96,7 +101,127 @@ public abstract class Artifact {
      * @param event The PlayerInteractEvent that triggered this action.
      * @return true if the interaction was successful, false otherwise.
      */
-    public boolean shiftLeftClick(PlayerInteractEvent event) {
+    public boolean interactShiftLeft(PlayerInteractEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player right-clicks with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickRight(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player left-clicks with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickLeft(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player shift-right-clicks with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickShiftRight(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player shift-left-clicks with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickShiftLeft(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player drops an instance of this artifact from the inventory, with the Q button.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickSingleDrop(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player middle-clicks with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickMiddle(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player uses a number key with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickNumberKey(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player double-clicks with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickDouble(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player clicks the left window border with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickLeftWindowBorder(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player clicks the right window border with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickRightWindowBorder(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player uses control drop with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickFullDrop(InventoryClickEvent event) {
+        return false;
+    }
+
+    /**
+     * Called when a player swaps offhand with this Artifact in an inventory.
+     *
+     * @param event The InventoryClickEvent that triggered this action.
+     * @return true if the interaction was successful, false otherwise.
+     */
+    public boolean clickSwapOffHand(InventoryClickEvent event) {
         return false;
     }
 
@@ -120,8 +245,9 @@ public abstract class Artifact {
      * @return An ItemStack of this Artifact with the specified amount.
      */
     public ItemStack getItem(int amount) {
-        if (amount > 64) {
-            amount = 64;
+        int maxStackSize = defaultStack.getMaxStackSize();
+        if (amount > maxStackSize) {
+            amount = maxStackSize;
         }
         ItemStack clone = defaultStack.clone();
         ItemMeta clonedMeta = clone.getItemMeta();
@@ -154,17 +280,19 @@ public abstract class Artifact {
         ItemStack item = getItem(amount);
         return location.getWorld().dropItem(location, item);
     }
+
     public NamespacedKey namespacedKey() {
-        return itemKey;
+        return namespacedKey;
     }
 
     /**
-     * Checks if the item has the specified ArtifactFlag.
+     * Checks if this Artifact has an ArtifactFlag by default.
      * @param flag The ArtifactFlag to check for.
      *
      * @return true if the item has the specified ArtifactFlag, false otherwise.
      */
     public boolean hasFlag(ArtifactFlag flag) {
-        return flags.contains(flag);
+        return defaultFlags.contains(flag);
     }
+
 }

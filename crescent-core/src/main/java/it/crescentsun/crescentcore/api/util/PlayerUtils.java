@@ -1,4 +1,4 @@
-package it.crescentsun.crescentcore.api;
+package it.crescentsun.crescentcore.api.util;
 
 import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.CrescentCore;
@@ -14,7 +14,6 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 import java.util.UUID;
 
 public class PlayerUtils {
@@ -42,7 +41,7 @@ public class PlayerUtils {
      */
     @Deprecated
     public static PlayerData getPlayerData(UUID uuid) {
-        return CrescentCore.getInstance().getPlayerDBManager().getData(uuid);
+        return CrescentCore.getInstance().getPlayerDataManager().getData(uuid);
     }
 
     /**

@@ -3,10 +3,10 @@ package it.crescentsun.artifacts.command;
 import it.crescentsun.artifacts.Artifacts;
 import it.crescentsun.artifacts.item.Artifact;
 import it.crescentsun.artifacts.item.AsyncArtifact;
-import it.crescentsun.crescentcore.api.InventoryUtils;
 import it.crescentsun.crescentcore.api.crystals.event.CrystalSource;
 import it.crescentsun.crescentcore.api.crystals.event.GenerateCrystalsEvent;
-import it.crescentsun.crescentcore.api.registry.ArtifactNamespaceKeys;
+import it.crescentsun.crescentcore.api.registry.ArtifactNamespacedKeys;
+import it.crescentsun.crescentcore.api.util.InventoryUtils;
 import it.crescentsun.crescentcore.cmd.bukkit.annotation.Permission;
 import it.crescentsun.crescentcore.cmd.core.BaseCommand;
 import it.crescentsun.crescentcore.cmd.core.annotation.Command;
@@ -58,7 +58,7 @@ public class ArtifactCommands extends BaseCommand {
         if (amount == 0) {
             amount = 1;
         }
-        if (artifact.namespacedKey().equals(ArtifactNamespaceKeys.CRYSTAL)) {
+        if (artifact.namespacedKey().equals(ArtifactNamespacedKeys.CRYSTAL)) {
             GenerateCrystalsEvent event = new GenerateCrystalsEvent(amount, CrystalSource.COMMAND, player);
             event.callEvent();
             if (event.isCancelled()) {

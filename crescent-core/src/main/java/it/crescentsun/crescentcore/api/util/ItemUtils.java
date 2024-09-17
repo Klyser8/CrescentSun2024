@@ -1,4 +1,4 @@
-package it.crescentsun.crescentcore.api;
+package it.crescentsun.crescentcore.api.util;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;

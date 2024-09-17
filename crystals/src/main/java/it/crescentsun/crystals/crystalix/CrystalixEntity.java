@@ -1,9 +1,9 @@
 package it.crescentsun.crystals.crystalix;
 
 import it.crescentsun.artifacts.api.ArtifactFactory;
+import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.api.registry.ArtifactNamespaceKeys;
-import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
-import it.crescentsun.crescentcore.core.data.player.PlayerData;
+import it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys;
 import it.crescentsun.crystals.Crystals;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -15,8 +15,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.function.Consumer;
 
-import static it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys.CRYSTALS_AMOUNT;
-
+@Deprecated
 public class CrystalixEntity {
     public static final double Y_OFFSET = 1.0;
     private final Crystals plugin;
@@ -31,7 +30,7 @@ public class CrystalixEntity {
     public CrystalixEntity(Crystals plugin, Player owner) {
         this.plugin = plugin;
         this.owner = owner;
-        ownerData = plugin.getCrescentCore().getPlayerManager().getData(owner.getUniqueId());
+        ownerData = plugin.getCrescentCore().getPlayerDataManager().getData(owner.getUniqueId());
         world = owner.getWorld();
         location = owner.getLocation().add(0, Y_OFFSET, 0);
         item = spawnCrystalix();
@@ -78,7 +77,7 @@ public class CrystalixEntity {
                 TextColor.color(189, 92, 255),
                 TextColor.color(167, 52, 255),
         };
-        int crystals = ownerData.getData(CRYSTALS_AMOUNT);
+        int crystals = ownerData.getDataValue(CrescentNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
         writtenCrystals = crystals;
         String crystalsString = String.valueOf(crystals);
         TextComponent name = Component.text("-[");

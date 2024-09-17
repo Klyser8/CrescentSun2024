@@ -1,15 +1,18 @@
 package it.crescentsun.crescentcore;
 
 import com.google.common.collect.ImmutableList;
+import it.crescentsun.crescentcore.api.ArtifactsProvider;
 import it.crescentsun.crescentcore.api.CrystalsProvider;
+import it.crescentsun.crescentcore.api.PrematureAccessException;
 import it.crescentsun.crescentcore.api.data.plugin.PluginDataRegistry;
 import it.crescentsun.crescentcore.api.data.plugin.PluginDataRepository;
-import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
+import it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys;
+import it.crescentsun.crescentcore.core.ServerStatistics;
 import it.crescentsun.crescentcore.core.network.BungeeConstants;
 import it.crescentsun.crescentcore.core.command.CrescentCoreCommands;
 import it.crescentsun.crescentcore.core.db.DatabaseManager;
-import it.crescentsun.crescentcore.core.db.PlayerDBManager;
-import it.crescentsun.crescentcore.core.db.PluginDBManager;
+import it.crescentsun.crescentcore.core.db.PlayerDataManager;
+import it.crescentsun.crescentcore.core.db.PluginDataManager;
 import it.crescentsun.crescentcore.core.lang.CrescentCoreLocalization;
 import it.crescentsun.crescentcore.core.listener.BungeeListener;
 import it.crescentsun.crescentcore.core.listener.CrescentCoreListener;
@@ -35,7 +38,7 @@ import java.util.*;
  * This is to ensure that this plugin's events are handled first.
  */
 public class CrescentCore extends JavaPlugin {
-
+    public static final UUID STATISTICS_UUID =  UUID.fromString("962a383f-8504-4d51-b790-e1eaeb3b007f");
     private DatabaseManager dbManager = null;
 
     private Protocol crescentSunProtocol = Protocol.create("crescentsun", "msg")
@@ -50,10 +53,14 @@ public class CrescentCore extends JavaPlugin {
     public static final PlayerDataRegistry PLAYER_DATA_ENTRY_REGISTRY = new PlayerDataRegistry();
     public static final PluginDataRegistry PLUGIN_DATA_REGISTRY = new PluginDataRegistry();
     private PluginDataRepository pluginDataRepository;
+
     private static CrescentCore instance;
     private CrystalsProvider crystalsProvider = null;
+    private ArtifactsProvider artifactsProvider = null;
+
     private String serverName;
     private List<String> serverList = new ArrayList<>();
+    private ServerStatistics statistics;
     public CrescentCore() {
         random = new Random();
     }
@@ -85,9 +92,11 @@ public class CrescentCore extends JavaPlugin {
         commandManager.registerCommand(new CrescentCoreCommands(this));
         establishDatabaseConnection();
 
-        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespaceKeys.PLAYER_USERNAME, DataType.VARCHAR_16, "");
-        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespaceKeys.PLAYER_FIRST_LOGIN, DataType.TIMESTAMP, new Timestamp(0));
-        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespaceKeys.PLAYER_LAST_SEEN, DataType.TIMESTAMP, new Timestamp(0));
+        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespacedKeys.PLAYER_USERNAME, DataType.VARCHAR_16, "");
+        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespacedKeys.PLAYER_FIRST_LOGIN, DataType.TIMESTAMP, new Timestamp(0));
+        PLAYER_DATA_ENTRY_REGISTRY.registerPlayerDataEntry(CrescentNamespacedKeys.PLAYER_LAST_SEEN, DataType.TIMESTAMP, new Timestamp(0));
+
+        PLUGIN_DATA_REGISTRY.registerDataClass(this, ServerStatistics.class);
     }
 
     @Override
@@ -119,7 +128,7 @@ public class CrescentCore extends JavaPlugin {
         int interval = getConfig().getInt("auto_save_interval");
         Bukkit.getScheduler().scheduleAsyncRepeatingTask(this, () -> {
             if (!Bukkit.getOnlinePlayers().isEmpty()) {
-                getPlayerDBManager().asyncSaveAllData();
+                getPlayerDataManager().asyncSaveAllData();
             }
         }, interval, interval);
     }
@@ -135,13 +144,25 @@ public class CrescentCore extends JavaPlugin {
         return crystalsProvider;
     }
 
-    public PluginDBManager getPluginDBManager() {
+    public void setArtifactsProvider(ArtifactsProvider provider) {
+        if (artifactsProvider != null) {
+            getLogger().warning("Attempted to set a new ArtifactsProvider, but one is already set.");
+        }
+        artifactsProvider = provider;
+    }
+
+    public ArtifactsProvider getArtifactsProvider() {
+        return artifactsProvider;
+    }
+
+    public PluginDataManager getPluginDataManager() {
         return dbManager.getPluginDataManager();
     }
 
-    public PlayerDBManager getPlayerDBManager() {
+    public PlayerDataManager getPlayerDataManager() {
         return dbManager.getPlayerDataManager();
     }
+
     public DatabaseManager getDatabaseManager() {
         return dbManager;
     }
@@ -191,5 +212,19 @@ public class CrescentCore extends JavaPlugin {
 
     public void setCrescentSunConnection(ProtoConnection crescentSunConnection) {
         this.crescentSunConnection = crescentSunConnection;
+    }
+
+    public void setStatistics(ServerStatistics statistics) {
+        if (this.statistics != null) {
+            getLogger().warning("Attempted to set a new ServerStatistics, but one is already set.");
+        }
+        this.statistics = statistics;
+    }
+
+    public ServerStatistics getStatistics() {
+        if (statistics == null) {
+            throw new PrematureAccessException("Statistics have not been initialized yet! Initialization takes place in the ServerLoadPostDBEvent of crescent-core!");
+        }
+        return statistics;
     }
 }

@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static it.crescentsun.crescentcore.api.data.plugin.PluginData.crescentCore;
 
@@ -22,17 +23,17 @@ import static it.crescentsun.crescentcore.api.data.plugin.PluginData.crescentCor
  */
 public class PluginDataRepository {
     //Caches for reflection metadata
-    private final Map<Class<? extends PluginData>, String> tableNameFromClassCache = new HashMap<>();
-    private final Map<String, Class<? extends PluginData>> classFromTableNameCache = new HashMap<>();
+    private final Map<Class<? extends PluginData>, String> tableNameFromClassCache = new ConcurrentHashMap<>();
+    private final Map<String, Class<? extends PluginData>> classFromTableNameCache = new ConcurrentHashMap<>();
 
-    private final Map<Class<? extends PluginData>, Pair<Field, DatabaseColumn>> primaryKeyCache = new HashMap<>();
-    private final Map<Class<? extends PluginData>, Map<Field, DatabaseColumn>> serializableFieldsCache = new HashMap<>();
+    private final Map<Class<? extends PluginData>, Pair<Field, DatabaseColumn>> primaryKeyCache = new ConcurrentHashMap<>();
+    private final Map<Class<? extends PluginData>, Map<Field, DatabaseColumn>> serializableFieldsCache = new ConcurrentHashMap<>();
 
     // This map stores data for each PluginData class. Each class has a map of key-value pairs.
     // First value stores the class which is used to store the data.
     // Second value stores the UUID used to fetch the data instance
     // Third is the data instance.
-    private final Map<PluginDataIdentifier, PluginData> repository = new HashMap<>();
+    private final Map<PluginDataIdentifier, PluginData> repository = new ConcurrentHashMap<>();
 
     /**
      * Registers a new class to the repository, allowing it to store instances.
@@ -58,13 +59,14 @@ public class PluginDataRepository {
      * @param uuid   The uuid identifying this particular instance.
      * @param value The instance of the class to add.
      */
-    public <T extends PluginData> void addDataInstance(@NotNull Class<T> classType, @NotNull UUID uuid, @NotNull PluginData value) {
+    @ApiStatus.Internal
+    public synchronized <T extends PluginData> void addDataInstance(@NotNull Class<T> classType, @NotNull UUID uuid, @NotNull PluginData value) {
         // Check if the value already exists
         if (getData(classType, uuid) != null) {
             crescentCore.getLogger().warning("Replaced duplicate data instance: " + value + ". Was this intentional?");
         }
         if (primaryKeyCache.get(classType) == null) {
-            throw new IllegalArgumentException("Error adding data instance: Class not registered: " + classType.getName());
+            throw new ClassNotRegisteredException("Couldn't add data instance: Class not registered: " + classType.getName());
         }
         PluginDataIdentifier identifier = new PluginDataIdentifier(classType, uuid);
         repository.put(identifier, value);
@@ -78,15 +80,19 @@ public class PluginDataRepository {
      * @param classType The class type.
      * @param uuid The uuid tied to the instance to retrieve.
      * @return The instance associated with the given uuid, or null if no instance was found.
-     * @throws IllegalArgumentException If the class is not registered.
+     * @throws IllegalArgumentException If the class is not registered
      */
-    @SuppressWarnings("unchecked")
-    @Nullable public <T extends PluginData> T getData(@NotNull Class<T> classType, @NotNull UUID uuid) {
-        if (primaryKeyCache.get(classType) == null) {
-            throw new IllegalArgumentException("Error getting data instance: Class not registered: " + classType.getName());
+    @Nullable public <T extends PluginData> T getData(Class<T> classType, UUID uuid) {
+        PluginData data = repository.get(new PluginDataIdentifier(classType, uuid));
+        if (data == null) {
+            return null;
         }
-        PluginDataIdentifier identifier = new PluginDataIdentifier(classType, uuid);
-        return (T) repository.get(identifier);
+        if (classType.isInstance(data)) {
+            return classType.cast(data);
+        } else {
+            // Handle the type mismatch
+            throw new ClassCastException("Data is not of type " + classType.getName() + " but is of type " + data.getClass().getName());
+        }
     }
 
     /**
@@ -127,9 +133,9 @@ public class PluginDataRepository {
      * @return The removed instance, or null if no instance was found for the given uuid.
      */
     @SuppressWarnings("unchecked")
-    public <T extends PluginData> T removeData(Class<T> classType, UUID uuid) {
+    public synchronized <T extends PluginData> T removeData(Class<T> classType, UUID uuid) {
         if (primaryKeyCache.get(classType) == null) {
-            throw new IllegalArgumentException("Error removing data instance: Class not registered: " + classType.getName());
+            throw new ClassNotRegisteredException("Error removing data instance: Class not registered: " + classType.getName());
         }
         PluginDataIdentifier identifier = new PluginDataIdentifier(classType, uuid);
         return (T) repository.remove(identifier);

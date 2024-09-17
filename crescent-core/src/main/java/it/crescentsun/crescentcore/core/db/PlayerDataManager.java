@@ -1,7 +1,7 @@
 package it.crescentsun.crescentcore.core.db;
 
 import it.crescentsun.crescentcore.CrescentCore;
-import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
+import it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys;
 import it.crescentsun.crescentcore.api.data.player.PlayerData;
 import it.crescentsun.crescentcore.api.data.DataEntry;
 import org.apache.commons.lang3.StringUtils;
@@ -18,9 +18,16 @@ import static it.crescentsun.crescentcore.CrescentCore.PLAYER_DATA_ENTRY_REGISTR
 /**
  * Manages player data, including loading, saving, updating, and creating default data.
  */
-public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
+@SuppressWarnings("ALL")
+public class PlayerDataManager {
     private final Map<String, String> INSERT_OR_UPDATE_PLAYER_DATA_QUERIES = new HashMap<>();
     private final Map<String, String> SELECT_PLAYER_DATA_QUERIES = new HashMap<>();
+
+    private final Map<UUID, PlayerData> dataMap = new HashMap<>();
+
+    private final CrescentCore crescentCore;
+
+    private final DatabaseManager dbManager;
 
     /**
      * Constructs a new PlayerManager instance.
@@ -28,8 +35,9 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
      * @param crescentCore      The CrescentCore plugin instance.
      * @param dbManager   The DatabaseManager instance.
      */
-    public PlayerDBManager(CrescentCore crescentCore, DatabaseManager dbManager) {
-        super(crescentCore, dbManager);
+    public PlayerDataManager(CrescentCore crescentCore, DatabaseManager dbManager) {
+        this.crescentCore = crescentCore;
+        this.dbManager = dbManager;
         populatePlayerDataQueries();
         populateSelectPlayerDataQueries();
     }
@@ -76,10 +84,9 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
      * @param uuid The UUID of the player whose data should be saved.
      * @return The saved PlayerData instance.
      */
-    @Override
     public PlayerData saveData(UUID uuid) {
         long startTime = System.currentTimeMillis();
-        PlayerData playerData = getData(uuid);
+        PlayerData playerData = dataMap.get(uuid);
         try (Connection connection = dbManager.getConnection()) {
             connection.setAutoCommit(false);
             prepareAndExecuteSaveStatement(uuid, connection, playerData);
@@ -103,7 +110,6 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
      *
      * @see #asyncSaveAllData()
      */
-    @Override
     public Map<UUID, PlayerData> saveAllData() {
         long startTime = System.currentTimeMillis();
         Map<UUID, PlayerData> savedData = new HashMap<>();
@@ -112,7 +118,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
 
             // Assume getAllPlayerDataKeys() retrieves all player UUIDs
             for (UUID dataKey : dataMap.keySet()) {
-                PlayerData playerData = getData(dataKey); // Retrieve each player's datax
+                PlayerData playerData = dataMap.get(dataKey); // Retrieve each player's datax
                 prepareAndExecuteSaveStatement(dataKey, connection, playerData);
                 savedData.put(dataKey, playerData);
             }
@@ -149,7 +155,6 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
      * @param uuid The UUID of the player whose data should be loaded.
      * @return The loaded PlayerData instance, or null if the player data is not found.
      */
-    @Override
     public PlayerData loadData(UUID uuid) {
         long startTime = System.currentTimeMillis();
         PlayerData playerData = new PlayerData(Bukkit.getPlayer(uuid));
@@ -177,7 +182,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
         } else {
             crescentCore.getLogger().info("Player UUID " + uuid + " data loaded successfully!");
         }
-        setData(uuid, playerData);
+        dataMap.put(uuid, playerData);
         long timeElapsed = System.currentTimeMillis() - startTime;
         crescentCore.getLogger().info("Player [" + Bukkit.getOfflinePlayer(uuid).getName() + "] data loaded in: " + timeElapsed + "ms");
         return playerData;
@@ -216,7 +221,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
                 crescentCore.getLogger().info("Player UUID " + uuid + " is new! Setting default data...");
                 setDefaultData(uuid, playerData);
             }
-            setData(uuid, playerData); // Assuming setData updates the player data in your system
+            dataMap.put(uuid, playerData); // Assuming setData updates the player data in your system
         }
         long timeElapsed = System.currentTimeMillis() - startTime;
         crescentCore.getLogger().info("All player data loaded in: " + timeElapsed + "ms");
@@ -226,11 +231,11 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
 
     public void setDefaultData(UUID uuid, PlayerData playerData) {
         playerData.updateDataValue(
-                CrescentNamespaceKeys.PLAYER_USERNAME, Bukkit.getOfflinePlayer(uuid).getName());
+                CrescentNamespacedKeys.PLAYER_USERNAME, Bukkit.getOfflinePlayer(uuid).getName());
         playerData.updateDataValue(
-                CrescentNamespaceKeys.PLAYER_FIRST_LOGIN, new Timestamp(System.currentTimeMillis()));
+                CrescentNamespacedKeys.PLAYER_FIRST_LOGIN, new Timestamp(System.currentTimeMillis()));
         playerData.updateDataValue(
-                CrescentNamespaceKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
+                CrescentNamespacedKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
     }
 
     public CompletableFuture<PlayerData> asyncLoadData(UUID dataKey) {
@@ -241,7 +246,7 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
     }
 
     private void prepareAndExecuteSaveStatement(UUID dataKey, Connection connection, PlayerData playerData) throws SQLException {
-        playerData.updateDataValue(CrescentNamespaceKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
+        playerData.updateDataValue(CrescentNamespacedKeys.PLAYER_LAST_SEEN, new Timestamp(System.currentTimeMillis()));
         for (String tableName : dbManager.getPlayerTableNames()) {
             String query = INSERT_OR_UPDATE_PLAYER_DATA_QUERIES.get(tableName);
             if (query == null) {
@@ -310,5 +315,13 @@ public class PlayerDBManager extends AbstractDataManager<UUID, PlayerData> {
             case TIMESTAMP -> statement.setTimestamp(index, (Timestamp) data.getValue());
             case BOOLEAN -> statement.setBoolean(index, (boolean) data.getValue());
         }
+    }
+
+    public PlayerData getData(UUID uuid) {
+        return dataMap.get(uuid);
+    }
+
+    public void removeData(UUID uuid) {
+        dataMap.remove(uuid);
     }
 }

@@ -38,5 +38,10 @@ public @interface DatabaseColumn {
      */
     boolean isPrimaryKey() default false;
 
+    /**
+     * Specifies the order of the column in the table.
+     * Columns with lower order values will be placed before columns with higher order values.
+     * @return The order of the column.
+     */
     int order();
 }

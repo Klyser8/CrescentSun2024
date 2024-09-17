@@ -1,9 +1,9 @@
 package it.crescentsun.jumpwarps.warphandling;
 
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
-import it.crescentsun.crescentcore.api.BungeeUtils;
 import it.crescentsun.crescentcore.api.data.player.PlayerData;
-import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
+import it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys;
+import it.crescentsun.crescentcore.api.util.BungeeUtils;
 import it.crescentsun.crescentcore.core.lang.CrescentCoreLocalization;
 import it.crescentsun.crescentmsg.api.MessageFormatter;
 import it.crescentsun.crescentmsg.api.MessageType;
@@ -152,8 +152,8 @@ public class JumpListener implements Listener {
             }
         }
         // Check that the player has enough crystals for this action
-        PlayerData data = plugin.getCrescentCore().getPlayerDBManager().getData(player.getUniqueId());
-        int crystals = data.getDataValue(CrescentNamespaceKeys.PLAYERS_CRYSTAL_AMOUNT);
+        PlayerData data = plugin.getCrescentCore().getPlayerDataManager().getData(player.getUniqueId());
+        int crystals = data.getDataValue(CrescentNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
         if (crystals < 10) {
             player.sendMessage(MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "You do not have enough crystals (10) to create a Jump Warp.", "10", "Jump Warp"));
             item.setItemStack(new ItemStack(Material.WRITABLE_BOOK));
@@ -247,7 +247,7 @@ public class JumpListener implements Listener {
             @Override
             public void run() {
                 if (ticks == 0) {
-                    future = plugin.getCrescentCore().getPlayerDBManager().asyncSaveData(player.getUniqueId());
+                    future = plugin.getCrescentCore().getPlayerDataManager().asyncSaveData(player.getUniqueId());
                 }
                 if (ticks >= 100) {
                     cancel();
@@ -265,7 +265,7 @@ public class JumpListener implements Listener {
                         } else {
                             player.sendMessage(CrescentCoreLocalization.GENERIC_TELEPORTATION_FAILURE.getFormattedMessage(player.locale(), jumpWarp.getDestinationServer()));
                         }
-                        plugin.getCrescentCore().getPlayerDBManager().removeData(player.getUniqueId());
+                        plugin.getCrescentCore().getPlayerDataManager().removeData(player.getUniqueId());
                         cancel();
                         return playerData;
                     });

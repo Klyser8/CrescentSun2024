@@ -7,6 +7,7 @@ import me.mrnavastar.protoweaver.core.util.ObjectSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.ApiStatus;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,12 +48,22 @@ public final class PluginDataRegistry {
             throw new UnsupportedOperationException("The plugin data registry is frozen and cannot be modified.");
         }
         // Throw exception if dataClass doesn't extend PluginData
-        if (dataClass.getSuperclass() != null && dataClass.getSuperclass().isInstance(PluginData.class)) {
+        if (!PluginData.class.isAssignableFrom(dataClass)) {
             throw new IllegalArgumentException("The data class must extend PluginData.");
         }
         registry.add(dataClass);
         dataRepository.registerNew(dataClass);
         pluginDataSerializer.register(dataClass);
+        if (dataClass.isInstance(SingletonPluginData.class)) {
+            try {
+                SingletonPluginData pluginData = (SingletonPluginData) dataClass.getConstructor().newInstance();
+                pluginData.tryInit();
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                     NoSuchMethodException e) {
+                CrescentCore.getInstance().getLogger().severe("Failed to instantiate singleton plugin data class " + dataClass.getName());
+                e.printStackTrace();
+            }
+        }
         CrescentCore.getInstance().getLogger().info("Plugin data class registered for plugin " + plugin.getName() + ": " + dataClass.getName());
     }
 

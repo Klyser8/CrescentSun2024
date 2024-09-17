@@ -4,6 +4,7 @@ import it.crescentsun.crescentcore.CrescentCore;
 import me.mrnavastar.protoweaver.api.netty.Sender;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Abstract class for plugin data that can be saved to a database.
@@ -28,7 +29,6 @@ public abstract class PluginData {
         if (!this.getClass().isAnnotationPresent(DatabaseTable.class)) { //TODO test
             throw new IllegalStateException("Plugin data class " + this.getClass().getName() + " should be annotated with @DatabaseTable!");
         }
-        // Register the subclass with the serializer if not already registered
     }
 
     public abstract UUID getUuid();
@@ -38,48 +38,51 @@ public abstract class PluginData {
      * <b>IMPORTANT: Whether this instance gets initialized or not SHOULD depend on the subclass' implementation of {@link #shouldInit()}</b>.
      * Call that before calling this method.
      */
-    public void init() {
-        initialized = true;
-        if (crescentCore.getPluginDataRepository().getData(this.getClass(), getUuid()) == null) {
-            crescentCore.getPluginDataRepository().addDataInstance(this.getClass(), getUuid(), this);
+    public boolean tryInit() {
+        if (shouldInit()) {
+            initialized = true;
+            if (crescentCore.getPluginDataRepository().getData(this.getClass(), getUuid()) == null) {
+                crescentCore.getPluginDataRepository().addDataInstance(this.getClass(), getUuid(), this);
+            }
         }
+        return initialized;
     }
 
     /**
      * This method should be overridden in the subclass to determine whether the data instance should be initialized.
      */
-    public abstract boolean shouldInit();
+    protected abstract boolean shouldInit();
 
     /**
      * Saves this PluginData instance to the database (asynchronously), to then be synced with other servers' repositories.
      *
      * @return Whether the data was saved and synced successfully.
      */
-    public boolean saveAndSync() {
-        return crescentCore.getPluginDBManager().asyncSaveData(this).exceptionally(throwable -> {
+    public CompletableFuture<Boolean> saveAndSync() {
+        return crescentCore.getPluginDataManager().asyncSaveData(this).exceptionally(throwable -> {
             crescentCore.getLogger().warning("Failed to save data: " + throwable.getMessage());
             return null;
         }).thenApplyAsync(pluginData -> {
             Sender send = crescentCore.getCrescentSunConnection().send(CrescentCore.PLUGIN_DATA_REGISTRY.getPluginDataSerializer().serialize(this));
             return send.isSuccess();
-        }).join();
+        });
     }
 
-    public boolean deleteAndSync() {
+    public CompletableFuture<Boolean> deleteAndSync() {
         // Async delete the data and handle errors
         PluginData pluginData = crescentCore.getPluginDataRepository().removeData(this.getClass(), getUuid());
         if (pluginData != null ) {
-            return crescentCore.getPluginDBManager().asyncDeleteData(this.getClass(), getUuid()).exceptionally(throwable -> {
+            return crescentCore.getPluginDataManager().asyncDeleteData(this.getClass(), getUuid()).exceptionally(throwable -> {
                 crescentCore.getLogger().warning("Failed to delete data from database: " + throwable.getMessage());
                 crescentCore.getPluginDataRepository().addDataInstance(this.getClass(), getUuid(), pluginData);
                 return false;
             }).thenApplyAsync(success -> {
                 Sender send = crescentCore.getCrescentSunConnection().send(CrescentCore.PLUGIN_DATA_REGISTRY.getPluginDataSerializer().serialize(new PluginDataIdentifier(getClass(), getUuid())));
                 return send.isSuccess();
-            }).join(); // Wait for the async operation to complete
+            });
         } else {
             crescentCore.getLogger().warning("Failed to delete data from repository.");
-            return false;
+            return CompletableFuture.completedFuture(false);
         }
     }
 

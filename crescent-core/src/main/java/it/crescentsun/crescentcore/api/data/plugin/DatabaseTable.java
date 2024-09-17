@@ -10,6 +10,8 @@ import java.lang.annotation.Target;
 /**
  * Annotation to mark a class as a database table.
  * This annotation should be used on classes that extend {@link PluginData}.
+ * The name given to the table will automatically have the prefix [plugin_name]_ attached to it.
+ * E.G.: If the plugin is named "Crystals", and tableName is "settings", the final name will be "crystals_settings".
  *
  * @see PluginData
  */

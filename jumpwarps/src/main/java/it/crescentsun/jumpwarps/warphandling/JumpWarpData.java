@@ -85,12 +85,14 @@ public class JumpWarpData extends PluginData {
     }
 
     @Override
-    public void init() {
-        super.init();
-        this.plugin = JumpWarps.getInstance();
-        this.bukkitTask = new JumpWarpScheduledTask(plugin, this);
+    public boolean tryInit() {
+        if (super.tryInit()) {
+            this.plugin = JumpWarps.getInstance();
+            this.bukkitTask = new JumpWarpScheduledTask(plugin, this);
 
-        Bukkit.getScheduler().runTaskTimer(plugin, bukkitTask, 0, 2);
+            Bukkit.getScheduler().runTaskTimer(plugin, bukkitTask, 0, 2);
+        }
+        return initialized;
     }
 
     @Override

@@ -1,19 +1,17 @@
 package it.crescentsun.crystals;
 
 import it.crescentsun.artifacts.api.ArtifactUtil;
-import it.crescentsun.crescentcore.CrescentCore;
 import it.crescentsun.crescentcore.api.event.server.ServerLoadPostDBSetupEvent;
 import it.crescentsun.crystals.artifact.CrystalArtifact;
 import io.papermc.paper.advancement.AdvancementDisplay;
+import it.crescentsun.crystals.data.CrystalsSettings;
+import it.crescentsun.crystals.data.CrystalsStatistics;
 import org.bukkit.entity.Item;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
-
-import java.util.concurrent.CompletableFuture;
 
 public class CrystalListener implements Listener {
 
@@ -46,7 +44,8 @@ public class CrystalListener implements Listener {
 
     @EventHandler
     public void onServerLoadPostDB(ServerLoadPostDBSetupEvent event) { //TODO test singleton
-        plugin.setCrystalsData(plugin.getCrescentCore().getPluginDataRepository().getData(CrystalsData.class, CrystalsData.UUID));
+        plugin.setStatistics(plugin.getCrescentCore().getPluginDataRepository().getData(CrystalsStatistics.class, Crystals.STATISTICS_UUID));
+        plugin.setSettings(plugin.getCrescentCore().getPluginDataRepository().getData(CrystalsSettings.class, Crystals.SETTINGS_UUID));
     }
 
 }

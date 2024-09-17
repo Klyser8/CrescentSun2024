@@ -3,7 +3,7 @@ package it.crescentsun.crescentcore.api.data.player;
 import it.crescentsun.crescentcore.CrescentCore;
 import it.crescentsun.crescentcore.api.event.player.PlayerDataFetchEvent;
 import it.crescentsun.crescentcore.api.event.player.PlayerDataUpdateEvent;
-import it.crescentsun.crescentcore.api.registry.CrescentNamespaceKeys;
+import it.crescentsun.crescentcore.api.registry.CrescentNamespacedKeys;
 import it.crescentsun.crescentcore.api.data.DataEntry;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -34,7 +34,7 @@ public class PlayerData {
      * @return The unique ID of the player.
      */
     public UUID getUniqueId() {
-        return UUID.fromString(getDataValue(CrescentNamespaceKeys.PLAYER_UUID));
+        return UUID.fromString(getDataValue(CrescentNamespacedKeys.PLAYER_UUID));
     }
 
     /**
@@ -44,6 +44,7 @@ public class PlayerData {
      * @param namespacedKey The namespaced key of the data to retrieve
      * @return The PlayerDataEntry object for the given namespaced key
      */
+    @ApiStatus.Internal
     public DataEntry<?> getDataEntry(NamespacedKey namespacedKey) {
         return playerDataEntries.get(namespacedKey);
     }

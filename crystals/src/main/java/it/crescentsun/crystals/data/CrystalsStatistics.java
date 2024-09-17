@@ -1,17 +1,19 @@
-package it.crescentsun.crystals;
+package it.crescentsun.crystals.data;
 
 import it.crescentsun.crescentcore.api.data.DataType;
 import it.crescentsun.crescentcore.api.data.plugin.DatabaseColumn;
 import it.crescentsun.crescentcore.api.data.plugin.DatabaseTable;
 import it.crescentsun.crescentcore.api.data.plugin.PluginData;
+import it.crescentsun.crescentcore.api.data.plugin.SingletonPluginData;
+import it.crescentsun.crystals.Crystals;
 
 import java.util.UUID;
 
-@DatabaseTable(plugin = Crystals.class, tableName = "crystals")
-public class CrystalsData extends PluginData {
+@DatabaseTable(plugin = Crystals.class, tableName = "statistics")
+public class CrystalsStatistics extends SingletonPluginData {
 
     @DatabaseColumn(columnName = "uuid", dataType = DataType.VARCHAR_36, isPrimaryKey = true, order = 1)
-    public static final UUID UUID = java.util.UUID.fromString("d6d3909a-0fae-4d1f-a124-f564783256ee"); //There will only ever be one instance of this data
+    private final UUID UUID = Crystals.STATISTICS_UUID; //There will only ever be one instance of this data
 
     @DatabaseColumn(columnName = "crystals_generated", dataType = DataType.INT, order = 2)
     private int crystalsGenerated;
@@ -37,6 +39,7 @@ public class CrystalsData extends PluginData {
 
     public void setCrystalsGenerated(int crystalsGenerated) {
         this.crystalsGenerated = crystalsGenerated;
+        saveAndSync();
     }
 
     public int getCrystalsSpent() {
@@ -45,6 +48,7 @@ public class CrystalsData extends PluginData {
 
     public void setCrystalsSpent(int crystalsSpent) {
         this.crystalsSpent = crystalsSpent;
+        saveAndSync();
     }
 
     public int getCrystalsLost() {
@@ -53,5 +57,6 @@ public class CrystalsData extends PluginData {
 
     public void setCrystalsLost(int crystalsLost) {
         this.crystalsLost = crystalsLost;
+        saveAndSync();
     }
 }

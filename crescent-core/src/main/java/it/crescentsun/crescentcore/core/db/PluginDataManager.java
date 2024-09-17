@@ -22,13 +22,13 @@ import java.util.concurrent.CompletableFuture;
 
 import static it.crescentsun.crescentcore.CrescentCore.PLUGIN_DATA_REGISTRY;
 
-public class PluginDBManager {
+public class PluginDataManager {
     private final Map<String, String> INSERT_OR_UPDATE_PLUGIN_DATA_QUERIES = new HashMap<>();
     private final Map<String, String> SELECT_PLUGIN_DATA_QUERIES = new HashMap<>();
     private final CrescentCore crescentCore;
     private final DatabaseManager dbManager;
 
-    public PluginDBManager(CrescentCore crescentCore) {
+    public PluginDataManager(CrescentCore crescentCore) {
         this.crescentCore = crescentCore;
         dbManager = crescentCore.getDatabaseManager();
         populateInsertOrUpdatePluginDataQueries();

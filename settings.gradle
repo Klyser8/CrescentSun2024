@@ -20,9 +20,16 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = 'CrescentSun'
-include 'crescent-core'
-include 'jumpwarps'
-include 'artifacts'
-include 'command-tomes'
-include 'crystals'
-include 'dropnames'
+include 'impl:crescent-core'
+include 'impl:jumpwarps'
+include 'impl:artifacts'
+include 'impl:command-tomes'
+include 'impl:crystals'
+include 'impl:dropnames'
+
+include 'api:crescent-core'
+include 'api:crescent-common'
+include 'api:artifacts'
+include 'api:crystals'
+findProject(':api:crystals')?.name = 'crystals'
+

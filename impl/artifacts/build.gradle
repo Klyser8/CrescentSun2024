@@ -1,0 +1,5 @@
+description = 'Custom items plugin for Crescent Sun Network'
+
+dependencies {
+    implementation libs.artifacts.api
+}

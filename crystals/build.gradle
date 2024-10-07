@@ -1,6 +1,0 @@
-description = 'Currency plugin for Crescent Sun Network'
-
-dependencies {
-    compileOnly libs.crescent.core
-    compileOnly libs.artifacts
-}

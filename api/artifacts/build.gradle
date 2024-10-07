@@ -1,0 +1,5 @@
+description = "API for the Artifacts plugin"
+
+dependencies {
+    compileOnly libs.crescent.core.api
+}

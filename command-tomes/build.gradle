@@ -1,6 +1,0 @@
-description = "Introduces the creation of special tomes to replace commands."
-
-dependencies {
-    compileOnly libs.crescent.core
-    compileOnly libs.artifacts
-}

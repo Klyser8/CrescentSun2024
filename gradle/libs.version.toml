@@ -3,19 +3,21 @@
 paper-api = "1.21.1-R0.1-SNAPSHOT"
 #javax-annotation = "1.3.2"
 
-# Crescent Sun plugins
-crescent-core = "1.3.9a"
-jumpwarps = "1.2.0"
-artifacts = "1.2.0"
-crystals = "1.1.0b"
-dropnames = "1.0.0b"
-command-tomes = "1.0.0"
+# Crescent Sun API versions
+crescent-core-api = "1.0.29"
+crescent-common = "1.0.4"
+artifacts-api = "1.0.17"
+crystals-api = "1.0.2"
 
 # Other dependencies
 triumph-cmd = "2.0.0-SNAPSHOT"
 hikari-cp = "5.1.0"
 protoweaver = "1.3.15"
-crescentmsg = "1.1.3"
+crescentmsg = "1.2.1"
+
+# Test
+junit_version = "5.11.0"
+mockbukkit_version = "3.107.0"
 
 [libraries]
 # Core
@@ -26,9 +28,16 @@ protoweaver = { module = "me.mrnavastar.protoweaver:paper", version.ref = "proto
 #javax-annotation = {module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation"}
 crescentmsg = { module = "it.crescentsun:crescentmsg", version.ref = "crescentmsg"}
 
-# Crescent Sun plugins
-crescent-core = { module = "it.crescentsun:crescent-core", version.ref = "crescent-core"}
-artifacts = { module = "it.crescentsun:artifacts", version.ref = "artifacts"}
+# Crescent Sun API reps
+crescent-core-api = { module = "it.crescentsun.api:crescent-core", version.ref = "crescent-core-api"}
+crescent-common = { module = "it.crescentsun.api:crescent-common", version.ref = "crescent-common"}
+artifacts-api = { module = "it.crescentsun.api:artifacts", version.ref = "artifacts-api"}
+crystals-api = { module = "it.crescentsun.api:crystals", version.ref = "crystals-api"}
+
+# Test
+
+junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit_version"}
+mockbukkit = { module = "com.github.seeseemelk:MockBukkit-v1.21", version.ref = "mockbukkit_version"}
 
 [plugins]
 java-library = { id = "java-library"}

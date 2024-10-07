@@ -1,5 +1,0 @@
-description = 'Cross-server/world teleportation plugin for Crescent Sun Network'
-
-dependencies {
-    compileOnly libs.crescent.core
-}

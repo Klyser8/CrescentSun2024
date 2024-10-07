@@ -1,0 +1,5 @@
+description = 'Holographic item names plugin for Crescent Sun Network'
+
+dependencies {
+    compileOnly libs.artifacts.api
+}

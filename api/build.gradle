@@ -1,0 +1,117 @@
+description = "API parent module"
+
+def crescentcore_version = "1.0.29"
+def crescent_common_version = "1.0.4"
+def artifacts_version = "1.0.17"
+def crystals_version = "1.0.2"
+
+void addRepositories(Project project) {
+    project.repositories {
+        mavenCentral()
+        maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
+        maven { url = uri('https://repo.triumphteam.dev/snapshots/') }
+        maven { url = uri('https://crescentsun.it/reposilite/releases') }
+    }
+}
+
+subprojects {
+    apply plugin: 'maven-publish'
+    apply plugin: 'java-library'
+
+    addRepositories(project)
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    project.version = [
+            "crescent-core"            : crescentcore_version,
+            "crescent-common"     : crescent_common_version,
+            "artifacts"                      : artifacts_version,
+            "crystals"                       : crystals_version
+    ].get(project.name)
+    project.group = "it.crescentsun.api"
+    project.description = project.description ?: "No description provided"
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+    }
+    tasks.withType(Javadoc).configureEach {
+        options.encoding = 'UTF-8'
+    }
+    tasks.register("sourcesJar", Jar) {
+        archiveClassifier.set('sources')
+        from sourceSets.main.allSource
+    }
+
+    build {
+        group = 'always-used'
+        dependsOn(sourcesJar)
+    }
+    publish {
+        group = 'always-used'
+    }
+
+    dependencies {
+        compileOnly libs.paper.api
+        api libs.triumph.cmd
+        api libs.crescent.common
+
+        testImplementation libs.junit
+        testImplementation libs.mockbukkit
+    }
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.java
+                artifactId = project.name
+
+                // Include the sources JAR
+                artifact tasks.named('sourcesJar').get()
+
+                // POM configuration
+                pom {
+                    name.set(project.name)
+                    description.set(project.description)
+                    url.set("https://crescentsun.it/reposilite/releases")
+                    scm {
+                        connection.set("scm:git:git://crescentsun.it/reposilite/.git")
+                        developerConnection.set("scm:git:ssh://crescentsun.it/reposilite/" + project.name + ".git")
+                        url.set("https://crescentsun.it/reposilite/" + project.name)
+                    }
+                    licenses {
+                        license {
+                            name.set('The Apache License, Version 2.0')
+                            url.set('https://www.apache.org/licenses/LICENSE-2.0.txt')
+                        }
+                    }
+                    developers {
+                        developer {
+                            id.set('crescentsun')
+                            name.set('Klyser8')
+                            email.set('klyser8.official@gmail.com')
+                        }
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                name = "CrescentSun"
+                url = uri("https://crescentsun.it/reposilite/releases")
+                credentials(PasswordCredentials)
+                authentication {
+                    basic(BasicAuthentication)
+                }
+            }
+        }
+    }
+}
+
+tasks.register("publishAll") {
+    group = 'always-used'
+    description = 'Publishes all subprojects'
+    dependsOn(subprojects.collect { it.tasks.named("publish") })
+}

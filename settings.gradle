@@ -19,17 +19,32 @@ dependencyResolutionManagement {
     }
 }
 
+// Root
 rootProject.name = 'CrescentSun'
-include 'impl:crescent-core'
-include 'impl:jumpwarps'
-include 'impl:artifacts'
-include 'impl:command-tomes'
-include 'impl:crystals'
-include 'impl:dropnames'
+include 'paper'
 
-include 'api:crescent-core'
-include 'api:crescent-common'
-include 'api:artifacts'
-include 'api:crystals'
-findProject(':api:crystals')?.name = 'crystals'
+// Implementations
+include 'paper:impl'
+findProject(':paper:impl')?.name = 'impl'
+include("paper:impl:crescent-core")
+findProject(":impl:crescent-core")?.name = "crescent-core-impl"
+
+include 'paper:impl:crescent-core'
+include 'paper:impl:jumpwarps'
+include 'paper:impl:artifacts'
+include 'paper:impl:command-tomes'
+include 'paper:impl:crystals'
+include 'paper:impl:dropnames'
+
+// APIs
+include 'paper:api'
+findProject(':paper:api')?.name = 'api'
+include("paper:api:crescent-core")
+findProject(":api:crescent-core")?.name = "crescent-core-api"
+
+include 'paper:api:crescent-core'
+include 'paper:api:crescent-common'
+include 'paper:api:artifacts'
+include 'paper:api:crystals'
+findProject('paper:api:crystals')?.name = 'crystals'
 

@@ -4,16 +4,16 @@ plugins {
     id 'io.github.goooler.shadow' version '8.1.8' apply false //Makes it available to subprojects
 }
 
-var author = 'Klyser8'
-var apiVersion = 1.21
+var author = project.findProperty('author')
+var apiVersion = project.findProperty('apiVersion')?.toDouble()
 description = "Implementation parent module"
 
-def crescentcore_version = "1.4.0a"
-def jumpwarps_version = "1.2.0b"
-def artifacts_version = "1.3.0"
-def crystals_version = "1.1.0b"
-def dropnames_version = "1.1.1"
-def commandtomes_version = "1.0.0"
+def crescentcore_version = project.findProperty('crescentcore_version')
+def jumpwarps_version = project.findProperty('jumpwarps_version')
+def artifacts_version = project.findProperty('artifacts_version')
+def crystals_version = project.findProperty('crystals_version')
+def dropnames_version = project.findProperty('dropnames_version')
+def commandtomes_version = project.findProperty('commandtomes_version')
 
 void addRepositories(Project project) {
     project.repositories {
@@ -23,7 +23,7 @@ void addRepositories(Project project) {
         maven { url = uri('https://repo.triumphteam.dev/snapshots/') }
         maven { url = uri('https://repo.maven.apache.org/maven2/') }
         maven { url = uri('https://crescentsun.it/reposilite/releases') }
-        maven { url  = uri("https://maven.mrnavastar.rocks/releases") }
+        maven { url  = uri("https://maven.mrnavastar.me/releases") }
     }
 }
 
@@ -72,8 +72,6 @@ subprojects {
         implementation libs.triumph.cmd
         compileOnly libs.paper.api
 
-        testImplementation libs.junit
-        testImplementation libs.mockbukkit
         if (project.name.equalsIgnoreCase("crescent-core")) {
             implementation libs.crescent.common
             implementation libs.crescentmsg

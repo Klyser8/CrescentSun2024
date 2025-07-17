@@ -1,9 +1,9 @@
 description = "API parent module"
 
-def crescentcore_version = "1.0.29"
-def crescent_common_version = "1.0.4"
-def artifacts_version = "1.0.17"
-def crystals_version = "1.0.2"
+def crescentcore_version = project.findProperty('crescentcore_api_version')
+def crescent_common_version = project.findProperty('crescent_common_version')
+def artifacts_version = project.findProperty('artifacts_api_version')
+def crystals_version = project.findProperty('crystals_api_version')
 
 void addRepositories(Project project) {
     project.repositories {
@@ -54,12 +54,11 @@ subprojects {
     }
 
     dependencies {
-        compileOnly libs.paper.api
-        api libs.triumph.cmd
-        api libs.crescent.common
-
-        testImplementation libs.junit
-        testImplementation libs.mockbukkit
+        if (!project.name.equalsIgnoreCase("crescent-common")) {
+            compileOnly libs.paper.api
+            api libs.triumph.cmd
+            api libs.crescent.common
+        }
     }
 
     publishing {

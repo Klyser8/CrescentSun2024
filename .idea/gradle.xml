@@ -9,18 +9,19 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/api" />
-            <option value="$PROJECT_DIR$/api/artifacts" />
-            <option value="$PROJECT_DIR$/api/crescent-common" />
-            <option value="$PROJECT_DIR$/api/crescent-core" />
-            <option value="$PROJECT_DIR$/api/crystals" />
-            <option value="$PROJECT_DIR$/impl" />
-            <option value="$PROJECT_DIR$/impl/artifacts" />
-            <option value="$PROJECT_DIR$/impl/command-tomes" />
-            <option value="$PROJECT_DIR$/impl/crescent-core" />
-            <option value="$PROJECT_DIR$/impl/crystals" />
-            <option value="$PROJECT_DIR$/impl/dropnames" />
-            <option value="$PROJECT_DIR$/impl/jumpwarps" />
+            <option value="$PROJECT_DIR$/paper" />
+            <option value="$PROJECT_DIR$/paper/api" />
+            <option value="$PROJECT_DIR$/paper/api/artifacts" />
+            <option value="$PROJECT_DIR$/paper/api/crescent-common" />
+            <option value="$PROJECT_DIR$/paper/api/crescent-core" />
+            <option value="$PROJECT_DIR$/paper/api/crystals" />
+            <option value="$PROJECT_DIR$/paper/impl" />
+            <option value="$PROJECT_DIR$/paper/impl/artifacts" />
+            <option value="$PROJECT_DIR$/paper/impl/command-tomes" />
+            <option value="$PROJECT_DIR$/paper/impl/crescent-core" />
+            <option value="$PROJECT_DIR$/paper/impl/crystals" />
+            <option value="$PROJECT_DIR$/paper/impl/dropnames" />
+            <option value="$PROJECT_DIR$/paper/impl/jumpwarps" />
           </set>
         </option>
       </GradleProjectSettings>

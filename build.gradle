@@ -3,5 +3,51 @@ description = "Project for Crescent Sun Network"
 tasks.register("buildAll") {
     group = 'always-used'
     description = 'Builds all subprojects'
-    dependsOn(subprojects.collect { it.tasks.named("build") })
+    dependsOn(subprojects.collect { proj ->
+        proj.tasks.matching { it.name == 'build' }
+    })
+}
+
+allprojects {
+    task buildPublishCopy {
+        group = 'Custom'
+        description = 'Builds the project, publishes it, and copies the resulting JAR to a specified directory on the crescent-sun network.'
+
+        dependsOn 'build', 'publish', 'copyJarToRemote'
+    }
+
+    task copyJarToRemote(type: Exec) {
+        group = 'Custom'
+        description = 'Copies the resulting JAR to the appropriate jar directory in the dev server.\n' +
+                'Example usage: gradle copyJarToRemote\n\n' +
+                'If the built jar is a velocity plugin, append -Pvelocity.\n\n' +
+                'If the built jar should go in the live server, append -Plive.\n\n'
+
+        doFirst {
+            def isLive = project.hasProperty('live')
+
+            def isVelocity = project.hasProperty('velocity')
+
+            def pluginTypeString = isVelocity ? "velocity" : "paper"
+
+            def jarFile = "${buildDir}/libs/${project.name}-${version}.jar"
+            def serverPort = 12622
+            def ip = "crescentsun.it"
+
+            var destinationDir
+            if (isLive) {
+                destinationDir = "/home/tomrom/crescent-sun/live/${pluginTypeString}-plugins"
+            } else {
+                destinationDir = "/home/tomrom/crescent-sun/dev/${pluginTypeString}-plugins"
+            }
+
+            // Print version
+            println "Project: ${project.name}"
+            println "Version: ${version}"
+            println "Live Environment: ${isLive}"
+
+            // Delete any files starting with ${project.name} in the subdirectory
+            commandLine 'scp', '-P', "${serverPort}", jarFile, "tomrom@${ip}:${destinationDir}"
+        }
+    }
 }

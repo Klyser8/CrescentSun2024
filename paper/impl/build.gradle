@@ -1,7 +1,7 @@
 import java.nio.charset.StandardCharsets
 
 plugins {
-    id 'io.github.goooler.shadow' version '8.1.8' apply false //Makes it available to subprojects
+    id 'com.gradleup.shadow' version '9.0.0-rc1' apply false //Makes it available to subprojects
 }
 
 var author = project.findProperty('author')
@@ -30,7 +30,7 @@ void addRepositories(Project project) {
 subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'java-library'
-    apply plugin: 'io.github.goooler.shadow'
+    apply plugin: 'com.gradleup.shadow'
 
     addRepositories(project)
 
@@ -55,6 +55,7 @@ subprojects {
     }
 
     shadowJar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         archiveClassifier.set("")
         relocate 'dev.triumphteam.cmd', 'it.crescentsun.cmd'
         exclude 'me/mrnavastar/**'
@@ -132,4 +133,19 @@ subprojects {
             commandLine 'scp', '-P', "${serverPort}", jarFile, "tomrom@${ip}:${destinationDir}"
         }
     }
+}
+
+tasks.register("buildAndCopyAll") {
+    group = 'always-used'
+    description = 'Builds all subprojects and then copies their JARs to the remote server'
+
+    // First, depend on the 'build' task for all subprojects
+    dependsOn(subprojects.collect { proj ->
+        proj.tasks.matching { it.name == 'build' }
+    })
+
+    // Then, depend on the 'copyJarToRemote' task for all subprojects
+    finalizedBy(subprojects.collect { proj ->
+        proj.tasks.matching { it.name == 'copyJarToRemote' }
+    })
 }

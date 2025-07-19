@@ -1,10 +1,13 @@
 package it.crescentsun.mobmadness.data;
 
 import it.crescentsun.mobmadness.data.entity.AuraHolder;
+import it.crescentsun.mobmadness.data.entity.aura.Aura;
+import it.crescentsun.mobmadness.data.entity.aura.AuraType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class Survivor implements AuraHolder {
 

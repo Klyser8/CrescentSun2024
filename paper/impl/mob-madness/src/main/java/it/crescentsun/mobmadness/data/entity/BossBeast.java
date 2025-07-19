@@ -2,6 +2,8 @@ package it.crescentsun.mobmadness.data.entity;
 
 import it.crescentsun.mobmadness.MobMadness;
 import it.crescentsun.mobmadness.data.Game;
+import it.crescentsun.mobmadness.data.entity.aura.Aura;
+import it.crescentsun.mobmadness.data.entity.aura.AuraType;
 import net.kyori.adventure.bossbar.BossBar;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -31,9 +33,9 @@ public abstract class BossBeast<T extends Mob> extends Beast<T> {
     protected final Map<AuraType, Double> auraModifiers;
     protected final List<PotionEffectType> potionImmunityList;
 
-    public BossBeast(MobMadness plugin, BeastType type, Game game, Location spawnLoc,
+    public BossBeast(MobMadness plugin, T mob, BeastType type, Game game, Location spawnLoc,
                      Map<AuraType, Double> auraModifiers, Map<EntityDamageEvent.DamageCause, Double> damageMultipliers, List<PotionEffectType> potionImmunityList) {
-        super(plugin, type, game, spawnLoc);
+        super(plugin, mob, type, game, spawnLoc);
         this.dmgCauseModifiers = damageMultipliers;
         this.auraModifiers = auraModifiers;
         this.potionImmunityList = potionImmunityList;

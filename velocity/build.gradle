@@ -4,7 +4,7 @@ plugins {
     id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.8'
 }
 
-def channelhandler_version = project.findProperty('channelhandler_version9')
+def channelhandler_version = project.findProperty('channelhandler_version')
 
 void addRepositories(Project project) {
     project.repositories {

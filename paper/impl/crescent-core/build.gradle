@@ -3,7 +3,7 @@ description = "Core plugin for Crescent Sun Network"
 dependencies {
     api libs.hikari.cp
     api libs.crescentmsg
-    api(libs.protoweaver) {
+    api(libs.protoweaver.paper) {
         artifact {
             name = "paper"
             extension = "jar"

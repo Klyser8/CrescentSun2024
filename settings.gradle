@@ -35,6 +35,7 @@ include 'paper:impl:artifacts'
 include 'paper:impl:command-tomes'
 include 'paper:impl:crystals'
 include 'paper:impl:dropnames'
+include 'paper:impl:mob-madness'
 
 // APIs
 include 'paper:api'
@@ -47,4 +48,8 @@ include 'paper:api:crescent-common'
 include 'paper:api:artifacts'
 include 'paper:api:crystals'
 findProject('paper:api:crystals')?.name = 'crystals'
+
+// Velocity
+include 'velocity'
+include 'velocity:channel-handler'
 

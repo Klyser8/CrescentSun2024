@@ -64,9 +64,6 @@ subprojects {
         group = 'always-used'
         dependsOn(shadowJar)
     }
-    copyJarToRemote {
-        group = 'always-used'
-    }
 
     dependencies {
         implementation libs.triumph.cmd
@@ -105,4 +102,34 @@ tasks.register("copyAllToRemote") {
     group = 'always-used'
     description = 'Copies all subprojects to the remote server - without flags.'
     dependsOn(subprojects.collect { it.tasks.named("copyJarToRemote") })
+}
+
+subprojects {
+    task buildAndCopy {
+        group = 'always-used'
+        description = 'Builds the project, publishes it, and copies the resulting JAR to a specified directory on the crescent-sun network.'
+
+        dependsOn 'build', 'copyJarToRemote'
+    }
+
+    task copyJarToRemote(type: Exec) {
+        group = 'always-used'
+        description = 'Copies the resulting JAR to the appropriate jar directory in the dev server.\n'
+
+        doFirst {
+
+            def jarFile = "${buildDir}/libs/${project.name}-${version}.jar"
+            def serverPort = 12622
+            def ip = "crescentsun.it"
+
+            var destinationDir = "/home/tomrom/crescent-sun/dev/paper-plugins"
+
+            // Print version
+            println "Project: ${project.name}"
+            println "Version: ${version}"
+
+            // Delete any files starting with ${project.name} in the subdirectory
+            commandLine 'scp', '-P', "${serverPort}", jarFile, "tomrom@${ip}:${destinationDir}"
+        }
+    }
 }

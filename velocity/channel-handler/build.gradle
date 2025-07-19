@@ -1,0 +1,14 @@
+description = "Velocity plugin responsible for communication between backend servers and the proxy"
+version = channelhandler_version
+
+dependencies {
+    api libs.crescentmsg
+    api libs.crescent.common
+    api(libs.protoweaver.velocity) {
+        artifact {
+            name = "proxy"
+            extension = "jar"
+            classifier = ""
+        }
+    }
+}

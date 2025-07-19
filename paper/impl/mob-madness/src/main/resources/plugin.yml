@@ -1,0 +1,9 @@
+name: $name
+version: $version
+main: it.crescentsun.mobmadness.MobMadness
+api-version: $apiVersion
+authors:
+  - $author
+description: $description
+depend:
+  - crescent-core

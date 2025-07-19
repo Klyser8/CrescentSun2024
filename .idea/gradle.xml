@@ -23,6 +23,7 @@
             <option value="$PROJECT_DIR$/paper/impl/dropnames" />
             <option value="$PROJECT_DIR$/paper/impl/jumpwarps" />
             <option value="$PROJECT_DIR$/paper/impl/mob-madness" />
+            <option value="$PROJECT_DIR$/paper/impl/triumph-cmd" />
             <option value="$PROJECT_DIR$/velocity" />
             <option value="$PROJECT_DIR$/velocity/channel-handler" />
           </set>

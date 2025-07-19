@@ -1,6 +1,5 @@
 package it.crescentsun.artifacts;
 
-import dev.triumphteam.cmd.bukkit.BukkitCommandManager;
 import it.crescentsun.api.artifacts.ArtifactRegistryService;
 import it.crescentsun.api.artifacts.ArtifactsAPI;
 import it.crescentsun.api.artifacts.item.Artifact;
@@ -9,6 +8,9 @@ import it.crescentsun.artifacts.command.ArtifactCommands;
 import it.crescentsun.artifacts.event.ArtifactRegistrationEvent;
 import it.crescentsun.artifacts.listener.ArtifactListener;
 import it.crescentsun.artifacts.registry.ArtifactRegistry;
+import it.crescentsun.triumphcmd.bukkit.BukkitCommandManager;
+import it.crescentsun.triumphcmd.core.suggestion.SimpleSuggestion;
+import it.crescentsun.triumphcmd.core.suggestion.SuggestionMethod;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
@@ -38,13 +40,13 @@ public class Artifacts extends CrescentPlugin implements ArtifactsAPI {
             return artifactRegistryService.getArtifact(key);
         });
         // Register argument
-        commandManager.registerSuggestion(Artifact.class, (commandSender, suggestionContext) -> {
+        commandManager.registerSuggestion(Artifact.class, (suggestionContext) -> {
             List<String> suggestions = new ArrayList<>();
             for (Artifact artifact : artifactRegistryService.getRegisteredArtifacts()) {
                 suggestions.add(artifact.namespacedKey().toString());
             }
             return suggestions;
-        });
+        }); //TODO reimplement with new triumph version
         commandManager.registerCommand(new ArtifactCommands(this));
     }
 

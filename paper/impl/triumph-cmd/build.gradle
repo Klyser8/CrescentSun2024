@@ -1,0 +1,74 @@
+repositories {
+    maven { url = uri('https://repo.triumphteam.dev/snapshots/') }
+}
+
+dependencies {
+    implementation "dev.triumphteam:triumph-cmd-bukkit:2.0.0-BETA-3"
+}
+
+shadowJar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveClassifier.set("")
+    relocate 'dev.triumphteam.cmd', 'it.crescentsun.triumphcmd'
+}
+
+build {
+    group = 'always-used'
+    dependsOn(shadowJar)
+}
+
+publish {
+    group = 'always-used'
+}
+
+tasks.register("sourcesJar", Jar) {
+    archiveClassifier.set('sources')
+    from sourceSets.main.allSource
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = project.name
+
+            // Include the sources JAR
+            artifact tasks.named('sourcesJar').get()
+
+            // POM configuration
+            pom {
+                name.set(project.name)
+                description.set(project.description)
+                url.set("https://crescentsun.it/reposilite/releases")
+                scm {
+                    connection.set("scm:git:git://crescentsun.it/reposilite/.git")
+                    developerConnection.set("scm:git:ssh://crescentsun.it/reposilite/" + project.name + ".git")
+                    url.set("https://crescentsun.it/reposilite/" + project.name)
+                }
+                licenses {
+                    license {
+                        name.set('The Apache License, Version 2.0')
+                        url.set('https://www.apache.org/licenses/LICENSE-2.0.txt')
+                    }
+                }
+                developers {
+                    developer {
+                        id.set('crescentsun')
+                        name.set('Klyser8')
+                        email.set('klyser8.official@gmail.com')
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "CrescentSun"
+            url = uri("https://crescentsun.it/reposilite/releases")
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+    }
+}

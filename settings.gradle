@@ -36,6 +36,8 @@ include 'paper:impl:command-tomes'
 include 'paper:impl:crystals'
 include 'paper:impl:dropnames'
 include 'paper:impl:mob-madness'
+include 'paper:impl:triumph-cmd'
+
 
 // APIs
 include 'paper:api'

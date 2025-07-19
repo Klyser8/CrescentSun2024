@@ -1,6 +1,5 @@
 package it.crescentsun.crystals;
 
-import dev.triumphteam.cmd.bukkit.BukkitCommandManager;
 import it.crescentsun.api.artifacts.ArtifactProvider;
 import it.crescentsun.api.artifacts.ArtifactRegistryService;
 import it.crescentsun.api.artifacts.item.Artifact;
@@ -22,6 +21,7 @@ import it.crescentsun.crystals.artifact.CrystalArtifact;
 import it.crescentsun.crystals.data.CrystalsSettings;
 import it.crescentsun.crystals.data.CrystalsStatistics;
 import it.crescentsun.crystals.sound.CrystalsSFX;
+import it.crescentsun.triumphcmd.bukkit.BukkitCommandManager;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.ItemStack;
@@ -62,7 +62,7 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
             }
         });
         // Register argument
-        commandManager.registerSuggestion(CrystalSpawnAnimation.class, (commandSender, suggestionContext) -> {
+        commandManager.registerSuggestion(CrystalSpawnAnimation.class, (suggestionContext) -> {
             List<String> suggestions = new ArrayList<>();
             for (CrystalSpawnAnimation animation :CrystalSpawnAnimation.values()) {
                 suggestions.add(animation.toString());

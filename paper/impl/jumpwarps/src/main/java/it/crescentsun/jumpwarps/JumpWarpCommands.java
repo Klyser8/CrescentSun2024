@@ -1,15 +1,12 @@
 package it.crescentsun.jumpwarps;
 
-import dev.triumphteam.cmd.bukkit.annotation.Permission;
-import dev.triumphteam.cmd.core.BaseCommand;
-import dev.triumphteam.cmd.core.annotation.Command;
-import dev.triumphteam.cmd.core.annotation.Default;
-import dev.triumphteam.cmd.core.annotation.Optional;
-import dev.triumphteam.cmd.core.annotation.SubCommand;
 import it.crescentsun.crescentmsg.api.MessageFormatter;
 import it.crescentsun.crescentmsg.api.MessageType;
 import it.crescentsun.jumpwarps.lang.JumpWarpLocalization;
 import it.crescentsun.jumpwarps.warphandling.JumpWarpData;
+import it.crescentsun.triumphcmd.bukkit.annotation.Permission;
+import it.crescentsun.triumphcmd.core.annotations.Command;
+import it.crescentsun.triumphcmd.core.annotations.Optional;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -18,7 +15,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Command(value = "jumpwarps", alias = "jw")
-public class JumpWarpCommands extends BaseCommand {
+public class JumpWarpCommands {
 
     private final JumpWarps plugin;
 
@@ -26,8 +23,8 @@ public class JumpWarpCommands extends BaseCommand {
         this.plugin = plugin;
     }
 
-    @Default
     @Permission("crescent.jumpwarps")
+    @Command
     public void defaultCommand(final CommandSender sender) {
         if (sender instanceof Player player) {
             player.sendMessage(JumpWarpLocalization.UNKNOWN_USAGE.getFormattedMessage(player.locale()));
@@ -36,8 +33,8 @@ public class JumpWarpCommands extends BaseCommand {
         }
     }
 
-    @SubCommand("help")
     @Permission("crescent.jumpwarps.help")
+    @Command("help")
     public void helpCommand(final CommandSender sender) {
         TextComponent text1 = MessageFormatter.formatCommandMessage(MessageType.INFO,
                 "[JumpWarps Help] (/jw help)", "[JumpWarps Help] (/jw help)");
@@ -52,8 +49,8 @@ public class JumpWarpCommands extends BaseCommand {
         sender.sendMessage(text3);
     }
 
-    @SubCommand("create")
     @Permission("crescent.jumpwarps.create")
+    @Command("create")
     public void createCommand(final CommandSender sender, final String warpName, final String targetServerName) {
         if (!(sender instanceof Player player)) {
             TextComponent text = MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "Only players can use this command.");
@@ -80,8 +77,8 @@ public class JumpWarpCommands extends BaseCommand {
         }
     }
 
-    @SubCommand("delete")
     @Permission("crescent.jumpwarps.delete")
+    @Command("delete")
     public void deleteCommand(final CommandSender sender, final String warpName) {
         if (warpName == null || warpName.isEmpty()) {
             TextComponent text = MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "You must specify a JumpWarp name.");
@@ -99,8 +96,8 @@ public class JumpWarpCommands extends BaseCommand {
         sender.sendMessage(text);
     }
 
-    @SubCommand("list")
     @Permission("crescent.jumpwarps.list")
+    @Command("list")
     public void listCommand(final CommandSender sender, @Optional final Boolean networkWide) {
         Locale locale = sender instanceof Player player ? player.locale() : null;
         if (networkWide == null || !networkWide) {

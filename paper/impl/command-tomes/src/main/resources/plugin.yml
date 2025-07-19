@@ -8,3 +8,4 @@ description: $description
 depend:
   - crescent-core
   - artifacts
+  - triumph-cmd

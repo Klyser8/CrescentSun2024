@@ -2,4 +2,7 @@ description = 'Holographic item names plugin for Crescent Sun Network'
 
 dependencies {
     compileOnly libs.artifacts.api
+    compileOnly libs.crescent.common
+    compileOnly libs.crescentmsg
+    compileOnly libs.crescent.core.api
 }

@@ -1,5 +1,7 @@
 description = 'Currency plugin for Crescent Sun Network'
 
 dependencies {
+    compileOnly libs.crescent.core.api
     compileOnly libs.artifacts.api
+    compileOnly libs.crystals.api
 }

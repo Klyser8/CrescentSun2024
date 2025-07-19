@@ -2,4 +2,12 @@ description = 'Custom items plugin for Crescent Sun Network'
 
 dependencies {
     implementation libs.artifacts.api
+    compileOnly libs.crescent.common
+    compileOnly libs.crescentmsg
+    compileOnly libs.crescent.core.api
+}
+
+shadowJar {
+    archiveBaseName.set("artifacts")
+    archiveClassifier.set("")  // no -all suffix
 }

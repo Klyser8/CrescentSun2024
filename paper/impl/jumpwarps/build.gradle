@@ -1,1 +1,7 @@
 description = 'Cross-server/world teleportation plugin for Crescent Sun Network'
+
+dependencies {
+    compileOnly libs.crescent.common
+    compileOnly libs.crescentmsg
+    compileOnly libs.crescent.core.api
+}

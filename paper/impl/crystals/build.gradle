@@ -1,6 +1,14 @@
 description = 'Currency plugin for Crescent Sun Network'
 
 dependencies {
-    compileOnly libs.artifacts.api
     implementation libs.crystals.api
+    compileOnly libs.artifacts.api
+    compileOnly libs.crescent.common
+    compileOnly libs.crescentmsg
+    compileOnly libs.crescent.core.api
+}
+
+shadowJar {
+    archiveBaseName.set("crystals")
+    archiveClassifier.set("")  // no -all suffix
 }

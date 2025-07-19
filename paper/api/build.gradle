@@ -9,7 +9,6 @@ void addRepositories(Project project) {
     project.repositories {
         mavenCentral()
         maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
-        maven { url = uri('https://repo.triumphteam.dev/snapshots/') }
         maven { url = uri('https://crescentsun.it/reposilite/releases') }
     }
 }
@@ -56,7 +55,6 @@ subprojects {
     dependencies {
         if (!project.name.equalsIgnoreCase("crescent-common")) {
             compileOnly libs.paper.api
-            api libs.triumph.cmd
             api libs.crescent.common
         }
     }

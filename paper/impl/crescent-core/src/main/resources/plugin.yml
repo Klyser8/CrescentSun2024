@@ -7,3 +7,4 @@ authors:
 description: $description
 depend:
   - ProtoWeaver
+  - triumph-cmd

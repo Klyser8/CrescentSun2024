@@ -1,11 +1,5 @@
 package it.crescentsun.crystals;
 
-import dev.triumphteam.cmd.bukkit.annotation.Permission;
-import dev.triumphteam.cmd.core.BaseCommand;
-import dev.triumphteam.cmd.core.annotation.Command;
-import dev.triumphteam.cmd.core.annotation.Default;
-import dev.triumphteam.cmd.core.annotation.Optional;
-import dev.triumphteam.cmd.core.annotation.SubCommand;
 import it.crescentsun.api.common.DatabaseNamespacedKeys;
 import it.crescentsun.api.crescentcore.data.player.PlayerData;
 import it.crescentsun.api.crystals.CrystalSource;
@@ -13,21 +7,24 @@ import it.crescentsun.api.crystals.CrystalSpawnAnimation;
 import it.crescentsun.api.crystals.event.GenerateCrystalsEvent;
 import it.crescentsun.crescentmsg.api.MessageFormatter;
 import it.crescentsun.crescentmsg.api.MessageType;
+import it.crescentsun.triumphcmd.bukkit.annotation.Permission;
+import it.crescentsun.triumphcmd.core.annotations.Command;
+import it.crescentsun.triumphcmd.core.annotations.Optional;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 @Command(value = "crystals", alias = "cr")
-public class CrystalsCommands extends BaseCommand {
+public class CrystalsCommands {
 
     private final Crystals plugin;
     public CrystalsCommands(Crystals plugin) {
         this.plugin = plugin;
     }
 
-    @Default
     @Permission("crescent.crystals")
+    @Command
     public void defaultCommand(CommandSender sender) {
         TextComponent text = MessageFormatter.formatCommandMessage(
                 MessageType.INFO, Component.text("Type \"/crystals help\" for help."),
@@ -35,8 +32,8 @@ public class CrystalsCommands extends BaseCommand {
         sender.sendMessage(text);
     }
 
-    @SubCommand("spawn")
     @Permission("crescent.crystals.spawn")
+    @Command("spawn")
     public void spawnCommand(CommandSender sender, Integer amount, CrystalSpawnAnimation animation) {
         if (!(sender instanceof Player player)) {
             TextComponent textComponent = MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "Only players can use this command.");
@@ -54,8 +51,8 @@ public class CrystalsCommands extends BaseCommand {
         player.sendMessage(textComponent);
     }
 
-    @SubCommand("add")
     @Permission("crescent.crystals.add")
+    @Command("add")
     public void addCommand(CommandSender sender, Integer amount, @Optional Player target) {
         if (amount <= 0) {
             TextComponent textComponent = MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "The amount must be greater than 0.");
@@ -80,8 +77,8 @@ public class CrystalsCommands extends BaseCommand {
         sender.sendMessage(textComponent);
     }
 
-    @SubCommand("remove")
     @Permission("crescent.crystals.remove")
+    @Command("remove")
     public void removeCommand(CommandSender sender, Integer amount, @Optional Player target) {
         if (amount <= 0) {
             TextComponent textComponent = MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "The amount must be greater than 0.");
@@ -98,8 +95,8 @@ public class CrystalsCommands extends BaseCommand {
         sender.sendMessage(textComponent);
     }
 
-    @SubCommand("set")
     @Permission("crescent.crystals.set")
+    @Command("set")
     public void setCommand(CommandSender sender, Integer amount, @Optional Player target) {
         if (amount < 0) {
             TextComponent textComponent = MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "The amount must be greater than or equal to 0.");

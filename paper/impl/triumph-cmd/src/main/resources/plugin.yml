@@ -1,0 +1,7 @@
+name: $name
+version: $version
+main: it.crescentsun.triumphcmd.TriumphCMD
+api-version: $apiVersion
+authors:
+  - $author
+description: $description

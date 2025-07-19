@@ -1,7 +1,7 @@
 import java.nio.charset.StandardCharsets
 
 plugins {
-    id 'com.gradleup.shadow' version '9.0.0-rc1' apply false //Makes it available to subprojects
+    id 'com.gradleup.shadow' version '9.0.0-rc1' apply false
 }
 
 var author = project.findProperty('author')
@@ -14,13 +14,13 @@ def artifacts_version = project.findProperty('artifacts_version')
 def crystals_version = project.findProperty('crystals_version')
 def dropnames_version = project.findProperty('dropnames_version')
 def commandtomes_version = project.findProperty('commandtomes_version')
+def triumphcmd_version = project.findProperty('triumphcmd_version')
 
 void addRepositories(Project project) {
     project.repositories {
         mavenCentral()
         maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
         maven { url = uri('https://oss.sonatype.org/content/groups/public/') }
-        maven { url = uri('https://repo.triumphteam.dev/snapshots/') }
         maven { url = uri('https://repo.maven.apache.org/maven2/') }
         maven { url = uri('https://crescentsun.it/reposilite/releases') }
         maven { url  = uri("https://maven.mrnavastar.me/releases") }
@@ -45,7 +45,8 @@ subprojects {
             "artifacts"                     : artifacts_version,
             "crystals"                      : crystals_version,
             "dropnames"                : dropnames_version,
-            "command-tomes"      : commandtomes_version
+            "command-tomes"      : commandtomes_version,
+            "triumph-cmd"             : triumphcmd_version
     ].get(project.name)
     project.group = "it.crescentsun"
     project.description = project.description ?: "No description provided"
@@ -54,31 +55,16 @@ subprojects {
         options.encoding = "UTF-8"
     }
 
-    shadowJar {
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-        archiveClassifier.set("")
-        relocate 'dev.triumphteam.cmd', 'it.crescentsun.cmd'
-        exclude 'me/mrnavastar/**'
-    }
-
     build {
         group = 'always-used'
         dependsOn(shadowJar)
     }
 
     dependencies {
-        implementation libs.triumph.cmd
-        compileOnly libs.paper.api
-
-        if (project.name.equalsIgnoreCase("crescent-core")) {
-            implementation libs.crescent.common
-            implementation libs.crescentmsg
-            implementation libs.crescent.core.api
-        } else {
-            compileOnly libs.crescent.common
-            compileOnly libs.crescentmsg
-            compileOnly libs.crescent.core.api
+        if (!project.name.equalsIgnoreCase("triumph-cmd")) {
+            compileOnly libs.triumphcmd
         }
+        compileOnly libs.paper.api
     }
 
     afterEvaluate {

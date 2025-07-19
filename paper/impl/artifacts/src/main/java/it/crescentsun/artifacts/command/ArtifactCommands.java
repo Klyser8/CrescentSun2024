@@ -1,17 +1,14 @@
 package it.crescentsun.artifacts.command;
 
-import dev.triumphteam.cmd.bukkit.annotation.Permission;
-import dev.triumphteam.cmd.core.BaseCommand;
-import dev.triumphteam.cmd.core.annotation.Command;
-import dev.triumphteam.cmd.core.annotation.Default;
-import dev.triumphteam.cmd.core.annotation.Optional;
-import dev.triumphteam.cmd.core.annotation.SubCommand;
 import it.crescentsun.api.common.ArtifactNamespacedKeys;
 import it.crescentsun.api.crescentcore.util.InventoryUtils;
 import it.crescentsun.artifacts.Artifacts;
 import it.crescentsun.api.artifacts.item.Artifact;
 import it.crescentsun.crescentmsg.api.MessageFormatter;
 import it.crescentsun.crescentmsg.api.MessageType;
+import it.crescentsun.triumphcmd.bukkit.annotation.Permission;
+import it.crescentsun.triumphcmd.core.annotations.Command;
+import it.crescentsun.triumphcmd.core.annotations.Optional;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;
@@ -19,7 +16,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 @Command(value = "artifacts", alias = "art")
-public class ArtifactCommands extends BaseCommand {
+public class ArtifactCommands {
 
     private final Artifacts plugin;
 
@@ -27,8 +24,8 @@ public class ArtifactCommands extends BaseCommand {
         this.plugin = plugin;
     }
 
-    @Default
     @Permission("crescent.artifacts")
+    @Command
     public void defaultCommand(CommandSender sender) {
         TextComponent text = MessageFormatter.formatCommandMessage(
                 MessageType.INFO, Component.text("Type \"/artifacts help\" for help."),
@@ -36,8 +33,8 @@ public class ArtifactCommands extends BaseCommand {
         sender.sendMessage(text);
     }
 
-    @SubCommand("give")
     @Permission("crescent.artifacts.give")
+    @Command("give")
     public void giveCommand(CommandSender sender, Player player, Artifact artifact, @Optional Integer amount) { //TODO test
         if (artifact == null) {
             TextComponent textComponent = MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "Artifact not found.", "");

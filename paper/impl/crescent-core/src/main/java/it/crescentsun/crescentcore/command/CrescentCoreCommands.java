@@ -3,12 +3,9 @@ package it.crescentsun.crescentcore.command;
 import it.crescentsun.api.crescentcore.data.player.PlayerData;
 import it.crescentsun.api.crescentcore.util.BungeeUtils;
 import it.crescentsun.crescentcore.CrescentCore;
-import dev.triumphteam.cmd.bukkit.annotation.Permission;
-import dev.triumphteam.cmd.core.BaseCommand;
-import dev.triumphteam.cmd.core.annotation.Command;
-import dev.triumphteam.cmd.core.annotation.Default;
-import dev.triumphteam.cmd.core.annotation.SubCommand;
 import it.crescentsun.crescentcore.lang.CrescentCoreLocalization;
+import it.crescentsun.triumphcmd.bukkit.annotation.Permission;
+import it.crescentsun.triumphcmd.core.annotations.Command;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -19,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 
 //@SuppressWarnings("ALL")
 @Command(value = "crescent", alias = "cs")
-public class CrescentCoreCommands extends BaseCommand {
+public class CrescentCoreCommands {
 
     private final CrescentCore crescentCore;
 
@@ -27,7 +24,7 @@ public class CrescentCoreCommands extends BaseCommand {
         this.crescentCore = crescentCore;
     }
 
-    @Default
+    @Command
     @Permission("crescent.crescentcore")
     public void defaultCommand(final CommandSender sender) {
         if (sender instanceof Player player) {
@@ -37,7 +34,7 @@ public class CrescentCoreCommands extends BaseCommand {
         }
     }
 
-    @SubCommand("switch")
+    @Command("switch")
     @Permission("crescent.crescentcore.switch")
     public void switchCommand(final CommandSender sender, String serverName) {
         if (!(sender instanceof Player player)) {
@@ -66,7 +63,7 @@ public class CrescentCoreCommands extends BaseCommand {
         sender.sendMessage(CrescentCoreLocalization.GENERIC_AWAIT_TELEPORTATION.getFormattedMessage(player.locale(), serverName));
     }
 
-    @SubCommand("save")
+    @Command("save")
     @Permission("crescent.crescentcore.save")
     public void saveCommand(final CommandSender sender) {
         sender.sendMessage(CrescentCoreLocalization.SAVING_PLAYER_DATA.getFormattedMessage(null));
@@ -82,7 +79,7 @@ public class CrescentCoreCommands extends BaseCommand {
         });
     }
 
-    @SubCommand("reload")
+    @Command("reload")
     @Permission("crescent.crescentcore.reload")
     public void reloadCommand(final CommandSender sender) {
         boolean success = crescentCore.getPluginDataManager().reloadAllData();

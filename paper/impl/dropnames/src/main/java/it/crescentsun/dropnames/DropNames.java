@@ -1,9 +1,9 @@
 package it.crescentsun.dropnames;
 
-import dev.triumphteam.cmd.bukkit.BukkitCommandManager;
 import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataRegistryService;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataService;
+import it.crescentsun.triumphcmd.bukkit.BukkitCommandManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Item;

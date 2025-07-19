@@ -12,7 +12,6 @@ void addRepositories(Project project) {
         maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
         maven { url = uri('https://oss.sonatype.org/content/groups/public/') }
         maven { url  = uri("https://maven.mrnavastar.me/releases") }
-        maven { url = uri('https://repo.triumphteam.dev/snapshots/') }
         maven { url = uri('https://crescentsun.it/reposilite/releases') }
     }
 }
@@ -76,6 +75,7 @@ subprojects {
         compileOnly libs.velocity.api
         implementation libs.crescent.common
         implementation libs.crescentmsg
+        annotationProcessor libs.velocity.api
     }
 }
 

@@ -133,10 +133,17 @@ public class PlayerDataManager implements PlayerDataService {
         }
         try (Connection connection = dbManager.getConnection()) {
             connection.setAutoCommit(false);
-            prepareAndExecuteSaveStatement(uuid, connection, playerData);
-            connection.commit();
-            connection.setAutoCommit(true); // Restore autocommit mode
-            crescentCore.getLogger().info("Player data saved for UUID: " + uuid);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try {
+                prepareAndExecuteSaveStatement(uuid, connection, playerData);
+                connection.commit();
+                crescentCore.getLogger().info("Player data saved for UUID: " + uuid);
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true); // Restore autocommit mode
+            }
         } catch (SQLException e) {
             crescentCore.getLogger().severe("An error occurred while saving player data for " + playerData.getPlayer().getName() + ": " + e.getMessage());
             e.printStackTrace();
@@ -161,15 +168,20 @@ public class PlayerDataManager implements PlayerDataService {
         Map<UUID, PlayerData> savedData = new HashMap<>();
         try (Connection connection = dbManager.getConnection()) {
             connection.setAutoCommit(false); // Start transaction
-
-            // Assume getAllPlayerDataKeys() retrieves all player UUIDs
-            for (UUID dataKey : repository.keySet()) {
-                PlayerData playerData = repository.get(dataKey); // Retrieve each player's datax
-                prepareAndExecuteSaveStatement(dataKey, connection, playerData);
-                savedData.put(dataKey, playerData);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try {
+                for (UUID dataKey : repository.keySet()) {
+                    PlayerData playerData = repository.get(dataKey);
+                    prepareAndExecuteSaveStatement(dataKey, connection, playerData);
+                    savedData.put(dataKey, playerData);
+                }
+                connection.commit();
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true); // Restore autocommit mode
             }
-            connection.commit(); // Commit all changes in a single transaction
-            connection.setAutoCommit(true); // Restore autocommit mode
         } catch (SQLException e) {
             crescentCore.getLogger().severe("An error occurred while saving all player data: " + e.getMessage());
             e.printStackTrace(); // Log the full stack trace
@@ -309,12 +321,25 @@ public class PlayerDataManager implements PlayerDataService {
     @Override
     public void deleteData(UUID uuid) {
         try (Connection connection = dbManager.getConnection()) {
-            for (String tableName : dbManager.getPlayerTableNames()) {
-                String query = "DELETE FROM " + tableName + " WHERE player_uuid = ?";
-                try (PreparedStatement statement = connection.prepareStatement(query)) {
-                    statement.setString(1, uuid.toString());
-                    statement.executeUpdate();
+            connection.setAutoCommit(false);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try {
+                for (String tableName : dbManager.getPlayerTableNames()) {
+                    String query = "DELETE FROM " + tableName + " WHERE player_uuid = ?";
+                    try (PreparedStatement statement = connection.prepareStatement(query)) {
+                        // Lock the row to be deleted
+                        lockPlayerDataRow(connection, tableName, uuid);
+
+                        statement.setString(1, uuid.toString());
+                        statement.executeUpdate();
+                    }
                 }
+                connection.commit();
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
             }
         } catch (SQLException e) {
             crescentCore.getLogger().severe("An error occurred while deleting " + Bukkit.getPlayer(uuid).getName() +  "'s data: " + e.getMessage());
@@ -344,5 +369,15 @@ public class PlayerDataManager implements PlayerDataService {
         }
     }
 
+    /**
+     * Acquire a row level lock on the player's data to avoid concurrent updates.
+     */
+    private void lockPlayerDataRow(Connection connection, String tableName, UUID uuid) throws SQLException {
+        String lockQuery = "SELECT player_uuid FROM " + tableName + " WHERE player_uuid = ? FOR UPDATE";
+        try (PreparedStatement lockStatement = connection.prepareStatement(lockQuery)) {
+            lockStatement.setString(1, uuid.toString());
+            lockStatement.executeQuery();
+        }
+    }
 
 }

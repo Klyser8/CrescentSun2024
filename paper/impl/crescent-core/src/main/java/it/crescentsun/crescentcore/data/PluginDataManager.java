@@ -169,22 +169,37 @@ public class PluginDataManager implements PluginDataService {
         }
         try (Connection connection = dbManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(queryTemplate)) {
-            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED); // Prevent concurrent modifications
-
-            int index = 1;
-            for (Field field : getSerializableFields(dataClass).keySet()) {
-                if (field.equals(getPrimaryKeyField(dataClass).key())) {
-                    if (!(field.get(pluginData) instanceof UUID)) {
-                        crescentCore.getLogger().severe("Error while saving plugin data: primary key field is not of type UUID for table " + fullTableName);
-                        throw new IllegalStateException("Primary key field is not of type UUID for table " + fullTableName);
-                    }
+            connection.setAutoCommit(false);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try {
+                // Acquire a pessimistic lock on the row we are about to modify
+                Pair<Field, DatabaseColumn> pkPair = getPrimaryKeyField(dataClass);
+                if (pkPair != null) {
+                    UUID uuid = (UUID) pkPair.key().get(pluginData);
+                    lockPluginDataRow(connection, fullTableName, pkPair.value().columnName(), uuid);
                 }
-                statement.setObject(index++, field.get(pluginData).toString());
-            }
 
-            statement.executeUpdate();
-            crescentCore.getLogger().info("Successfully saved plugin data to the database for table " + fullTableName + " in " + (System.currentTimeMillis() - startTime) + "ms");
-            return pluginData;
+                int index = 1;
+                for (Field field : getSerializableFields(dataClass).keySet()) {
+                    if (field.equals(getPrimaryKeyField(dataClass).key())) {
+                        if (!(field.get(pluginData) instanceof UUID)) {
+                            crescentCore.getLogger().severe("Error while saving plugin data: primary key field is not of type UUID for table " + fullTableName);
+                            throw new IllegalStateException("Primary key field is not of type UUID for table " + fullTableName);
+                        }
+                    }
+                    statement.setObject(index++, field.get(pluginData).toString());
+                }
+
+                statement.executeUpdate();
+                connection.commit();
+                crescentCore.getLogger().info("Successfully saved plugin data to the database for table " + fullTableName + " in " + (System.currentTimeMillis() - startTime) + "ms");
+                return pluginData;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
         } catch (SQLException e) {
             crescentCore.getLogger().severe("An error occurred while saving plugin data to the database: " + e.getMessage());
         } catch (IllegalAccessException e) {
@@ -264,15 +279,27 @@ public class PluginDataManager implements PluginDataService {
         try (Connection connection = dbManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(queryTemplate)) {
 
-            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED); // Prevent concurrent modifications
-            statement.setObject(1, uuid.toString());
+            connection.setAutoCommit(false);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try {
+                // Lock the row we are about to delete
+                lockPluginDataRow(connection, tableName, primaryKeyPair.value().columnName(), uuid);
 
-            int affectedRows = statement.executeUpdate();
-            if (affectedRows > 0) {
-                crescentCore.getLogger().info("Successfully deleted data with primary key " + uuid + " from table " + tableName);
-                return new PluginDataIdentifier<>(dataClass, uuid);
-            } else {
-                crescentCore.getLogger().warning("No data found with primary key " + uuid + " in table " + tableName);
+                statement.setObject(1, uuid.toString());
+
+                int affectedRows = statement.executeUpdate();
+                connection.commit();
+                if (affectedRows > 0) {
+                    crescentCore.getLogger().info("Successfully deleted data with primary key " + uuid + " from table " + tableName);
+                    return new PluginDataIdentifier<>(dataClass, uuid);
+                } else {
+                    crescentCore.getLogger().warning("No data found with primary key " + uuid + " in table " + tableName);
+                }
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
             }
         } catch (SQLException e) {
             crescentCore.getLogger().severe("An error occurred while deleting data from the database: " + e.getMessage());
@@ -544,6 +571,17 @@ public class PluginDataManager implements PluginDataService {
         DatabaseTable annotation = dataClass.getAnnotation(DatabaseTable.class);
         String fullTableName = annotation.plugin().getSimpleName() + "_" + annotation.tableName();
         return fullTableName.toLowerCase();
+    }
+
+    /**
+     * Locks a specific row for update to avoid concurrent modifications.
+     */
+    private void lockPluginDataRow(Connection connection, String tableName, String primaryKeyColumn, UUID uuid) throws SQLException {
+        String lockQuery = "SELECT " + primaryKeyColumn + " FROM " + tableName + " WHERE " + primaryKeyColumn + " = ? FOR UPDATE";
+        try (PreparedStatement lockStmt = connection.prepareStatement(lockQuery)) {
+            lockStmt.setString(1, uuid.toString());
+            lockStmt.executeQuery();
+        }
     }
 
     public void clearDataOfType(Class<? extends PluginData> classType) {

@@ -2,6 +2,8 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/paper/impl/crescent-core/src/main/java/it/crescentsun/crescentcore/data/DatabaseManager.java" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/paper/impl/crescent-core/src/main/java/it/crescentsun/crescentcore/data/PlayerDataManager.java" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/paper/impl/crescent-core/src/main/java/it/crescentsun/crescentcore/data/PluginDataManager.java" dialect="GenericSQL" />
+    <file url="PROJECT" dialect="MySQL" />
   </component>
 </project>

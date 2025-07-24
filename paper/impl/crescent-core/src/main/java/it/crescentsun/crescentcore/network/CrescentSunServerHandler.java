@@ -33,6 +33,7 @@ public class CrescentSunServerHandler implements ProtoConnectionHandler {
             Object obj = objectSerializer.deserialize(bytes);
             switch (obj) {
                 case PluginData pluginData -> {
+                    pluginData.resolveOwningPlugin();
                     crescentCore.getPluginDataManager().insertData(pluginData.getUuid(), pluginData, true);
                     crescentCore.getLogger().info("Received plugin data: " + pluginData.getClass().getSimpleName() + " with UUID: "
                             + pluginData.getUuid() + " from " + connection.getRemoteAddress());

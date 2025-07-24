@@ -42,7 +42,6 @@ public class JumpWarpData extends PluginData {
     @DatabaseColumn(columnName = "server_destination", dataType = DataType.VARCHAR_255, order = 8)
     private String destinationServer;
 
-    transient private final JumpWarps plugin;
     transient private Consumer<BukkitTask> bukkitTask;
 
     /**
@@ -65,7 +64,6 @@ public class JumpWarpData extends PluginData {
         this.y = location.getBlockY();
         this.z = location.getBlockZ();
         this.destinationServer = this.server;
-        this.plugin = JumpWarps.getInstance();
     }
 
     public JumpWarpData(UUID uuid, String warpName, String server, Location location, String destinationServer) {
@@ -78,21 +76,19 @@ public class JumpWarpData extends PluginData {
         this.y = location.getBlockY();
         this.z = location.getBlockZ();
         this.destinationServer = destinationServer;
-        this.plugin = JumpWarps.getInstance();
     }
 
     // Required for reflection
     private JumpWarpData() {
         super();
-        this.plugin = JumpWarps.getInstance();
     }
 
     @Override
     public boolean tryInit() {
         if (super.tryInit()) {
-            this.bukkitTask = new JumpWarpScheduledTask(plugin, this);
+            this.bukkitTask = new JumpWarpScheduledTask((JumpWarps) owningPlugin, this);
 
-            Bukkit.getScheduler().runTaskTimer(plugin, bukkitTask, 0, 2);
+            Bukkit.getScheduler().runTaskTimer(owningPlugin, bukkitTask, 0, 2);
         }
         return initialized;
     }
@@ -102,7 +98,7 @@ public class JumpWarpData extends PluginData {
         if (server == null) {
             return false;
         }
-        String serverName = plugin.getCrescentCoreAPI().getServerName();
+        String serverName = owningPlugin.getCrescentCoreAPI().getServerName();
         if (serverName == null) {
             return false;
         }

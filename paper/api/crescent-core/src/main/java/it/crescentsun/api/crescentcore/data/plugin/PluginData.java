@@ -1,7 +1,9 @@
 package it.crescentsun.api.crescentcore.data.plugin;
 
+import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.api.crescentcore.data.DataType;
 import it.crescentsun.api.crescentcore.data.DataNotFoundException;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.UUID;
@@ -23,14 +25,19 @@ import java.util.concurrent.CompletionException;
  */
 public abstract class PluginData {
 
-    protected boolean initialized = false;
     protected static PluginDataService pluginDataService;
+
+    /** The plugin instance that owns this data. Populated after deserialization. */
+    protected transient CrescentPlugin owningPlugin;
+    /** Whether this data instance has been initialized. */
+    protected transient boolean initialized = false;
 
     protected PluginData() {
         // Check that any subclass is annotated with @DatabaseTable
         if (!this.getClass().isAnnotationPresent(DatabaseTable.class)) { //TODO test
             throw new IllegalStateException("Plugin data class " + this.getClass().getName() + " should be annotated with @DatabaseTable!");
         }
+        resolveOwningPlugin();
     }
 
     /**
@@ -114,6 +121,21 @@ public abstract class PluginData {
      * @return Whether the data instance is dependent on a proxy connection.
      */
     public abstract boolean isProxyDependent();
+
+    /**
+     * Populates the {@link #owningPlugin} field based on the {@link DatabaseTable}
+     * annotation present on the plugin data implementation.
+     */
+    @ApiStatus.Internal
+    public void resolveOwningPlugin() {
+        if (owningPlugin != null) return;
+        if (this.getClass().isAnnotationPresent(DatabaseTable.class)) {
+            Class<? extends CrescentPlugin> pluginClass = this.getClass()
+                    .getAnnotation(DatabaseTable.class).plugin();
+
+            this.owningPlugin = CrescentPlugin.getPlugin(pluginClass);
+        }
+    }
 
     /**
      * Sets the PluginDataService instance to be used by all PluginData instances.

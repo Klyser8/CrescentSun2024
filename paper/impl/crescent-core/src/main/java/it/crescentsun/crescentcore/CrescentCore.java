@@ -79,7 +79,6 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
         BukkitCommandManager<CommandSender> commandManager = BukkitCommandManager.create(this);
         commandManager.registerCommand(new CrescentCoreCommands(this));
         establishDatabaseConnection();
-
         initServices();
         PluginData.setPluginDataService(pluginDataService);
     }

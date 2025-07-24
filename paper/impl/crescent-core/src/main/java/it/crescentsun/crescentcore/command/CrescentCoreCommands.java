@@ -61,6 +61,12 @@ public class CrescentCoreCommands {
         });
 
         sender.sendMessage(CrescentCoreLocalization.GENERIC_AWAIT_TELEPORTATION.getFormattedMessage(player.locale(), serverName));
+        // If player is still connected to this server five seconds later, send error message
+        crescentCore.getServer().getScheduler().runTaskLater(crescentCore, () -> {
+            if (player.isOnline()) {
+                sender.sendMessage(CrescentCoreLocalization.GENERIC_TELEPORTATION_FAILURE.getFormattedMessage(player.locale(), serverName));
+            }
+        }, 100L); // 5 seconds
     }
 
     @Command("save")

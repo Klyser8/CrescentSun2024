@@ -1,5 +1,6 @@
 package it.crescentsun.api.crescentcore.data.plugin;
 
+import it.crescentsun.api.crescentcore.CrescentPlugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.lang.annotation.ElementType;
@@ -31,5 +32,5 @@ public @interface DatabaseTable {
      *
      * @return The class of the plugin.
      */
-    Class<? extends JavaPlugin> plugin();
+    Class<? extends CrescentPlugin> plugin();
 }

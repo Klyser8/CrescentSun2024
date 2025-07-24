@@ -116,7 +116,7 @@ public class JumpListener implements Listener {
         if (jumpWarp == null) {
             return;
         }
-        plugin.getJumpWarpManager().getJumpWarpBuffer().put(player, new JumpWarpManager.PlayerJumpWarpBufferEntry(jumpWarp, player.getWorld().getFullTime()));
+        plugin.getJumpWarpManager().getJumpWarpBuffer().put(player, new JumpWarpManager.PlayerJumpWarpBufferEntry(jumpWarp, player.getWorld().getGameTime()));
     }
 
 //    @EventHandler
@@ -202,7 +202,8 @@ public class JumpListener implements Listener {
         if (jumpEffect == null || jumpEffect.getAmplifier() < 90) {
             return;
         }
-        JumpWarpManager.PlayerJumpWarpBufferEntry playerJumpWarpBufferEntry = plugin.getJumpWarpManager().getJumpWarpBuffer().get(player);
+        JumpWarpManager jumpWarpManager = plugin.getJumpWarpManager();
+        JumpWarpManager.PlayerJumpWarpBufferEntry playerJumpWarpBufferEntry = jumpWarpManager.getJumpWarpBuffer().get(player);
         if (playerJumpWarpBufferEntry == null) {
             return;
         }
@@ -210,6 +211,7 @@ public class JumpListener implements Listener {
         if (jumpWarp == null) {
             return;
         }
+        jumpWarpManager.getJumpWarpBuffer().remove(player);
         launchPlayer(player, jumpWarp);
     }
 

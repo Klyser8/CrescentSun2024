@@ -133,6 +133,7 @@ public class PluginDataManager implements PluginDataService {
             throw new ClassNotRegisteredException("Couldn't insert data instance: Class not registered: " + dataClass.getName());
         }
 
+        pluginData.resolveOwningPlugin();
         PluginDataIdentifier<? extends PluginData> identifier = new PluginDataIdentifier<>(dataClass, uuid);
         if (getData(identifier) != null && !shouldReplace) {
             crescentCore.getLogger().warning("Data instance already exists for identifier " + identifier + ", yet the new one was marked as not to replace. Ignoring.");
@@ -231,6 +232,7 @@ public class PluginDataManager implements PluginDataService {
                 Constructor<? extends PluginData> constructor = dataClass.getDeclaredConstructor();
                 constructor.setAccessible(true);
                 dataInstance = constructor.newInstance();
+                dataInstance.resolveOwningPlugin();
                 if (resultSet.next()) {
                     int index = 1;
                     for (Field field : getSerializableFields(dataClass).keySet()) {
@@ -360,6 +362,7 @@ public class PluginDataManager implements PluginDataService {
                             Constructor<? extends PluginData> constructor = dataClass.getDeclaredConstructor();
                             constructor.setAccessible(true);
                             PluginData dataInstance = constructor.newInstance();
+                            dataInstance.resolveOwningPlugin();
 
                             int index = 1; // Index used to retrieve the values from the result set
                             UUID uuid = null; // The key used to store the instance in the repository

@@ -1,10 +1,7 @@
 package it.crescentsun.jumpwarps.warphandling;
 
 import it.crescentsun.jumpwarps.JumpWarps;
-import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -39,9 +36,9 @@ public class JumpWarpScheduledTask implements Consumer<BukkitTask> {
             bukkitTask.cancel();
         }
         //Check if a player enters the jumpwarp.
-        World world = jumpWarp.getLocation().getWorld();
+        World world = Bukkit.getWorld(jumpWarp.getWorldUUID());
 
-        world.spawnParticle(org.bukkit.Particle.CRIT, fxLoc, 5, 0.25, 0.25, 0.25, 0.1);
+        world.spawnParticle(Particle.CRIT, fxLoc, 5, 0.25, 0.25, 0.25, 0.1);
 
         Map<Player, JumpWarpManager.PlayerJumpWarpBufferEntry> buffer = jumpWarpManager.getJumpWarpBuffer();
         for (Player player : buffer.keySet()) {
@@ -51,11 +48,11 @@ public class JumpWarpScheduledTask implements Consumer<BukkitTask> {
             }
 
             // If current world time is more than 10 ticks ahead of the world time stored, remove the player from the map.
-            if (world.getFullTime() - bufferEntry.time() > 10) {
+            if (world.getGameTime() - bufferEntry.time() > 10) {
                 buffer.remove(player);
             } else {
                 player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 3, 93));
-                world.spawnParticle(org.bukkit.Particle.CRIT, fxLoc.clone().add(0, 1, 0),
+                world.spawnParticle(Particle.CRIT, fxLoc.clone().add(0, 1, 0),
                         10, 0.25, 0.5, 0.25, 0.1);
             }
         }

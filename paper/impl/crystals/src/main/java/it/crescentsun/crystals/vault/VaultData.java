@@ -85,7 +85,7 @@ public class VaultData extends PluginData {
                 return false;
             }
             this.bukkitTask = new VaultScheduledTask((Crystals) owningPlugin, owner, this);
-            Bukkit.getScheduler().runTaskTimer(owningPlugin, bukkitTask, 0, 2);
+            Bukkit.getScheduler().runTaskTimer(owningPlugin, bukkitTask, 0, 1);
         }
         return initialized;
     }

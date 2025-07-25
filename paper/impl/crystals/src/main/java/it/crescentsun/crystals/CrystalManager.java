@@ -53,6 +53,48 @@ public class CrystalManager implements CrystalsService {
         }
     }
 
+    @Override
+    public int getCrystalsSpawned(Player player) {
+        PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
+        Optional<Integer> crystalsSpawned = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED);
+        return crystalsSpawned.orElse(0);
+    }
+
+    @Override
+    public int getCrystalsInVault(Player player) {
+        PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
+        Optional<Integer> crystalsInVault = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
+        return crystalsInVault.orElse(0);
+    }
+
+    @Override
+    public void addCrystalsToVault(Player player, int amount) {
+        PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
+        Optional<Integer> currentCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
+        int newAmount = currentCrystals.orElse(0) + amount;
+        playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT, newAmount);
+    }
+
+    @Override
+    public void removeCrystalsFromVault(Player player, int amount) {
+        PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
+        Optional<Integer> currentCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
+        int newAmount = currentCrystals.orElse(0) - amount;
+        if (newAmount < 0) {
+            newAmount = 0; // Prevent negative crystals
+        }
+        playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT, newAmount);
+    }
+
+    @Override
+    public void setCrystalsInVault(Player player, int amount) {
+        PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
+        if (amount < 0) {
+            amount = 0; // Prevent negative crystals
+        }
+        playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT, amount);
+    }
+
     private void hover(Player player, ItemStack crystalStack, CrystalSource source, Location spawnLocation) {
         AtomicInteger movementTicks = new AtomicInteger();
         AtomicReference<Location> previousTargetLoc = new AtomicReference<>(player.getLocation());
@@ -220,85 +262,6 @@ public class CrystalManager implements CrystalsService {
 
     private boolean isFinite(Vector vector) {
         return Double.isFinite(vector.getX()) && Double.isFinite(vector.getY()) && Double.isFinite(vector.getZ());
-    }
-
-    @Override
-    public void addCrystals(Player player, int amount, CrystalSource source) {
-        PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
-        Optional<Integer> crystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
-
-        if (source == CrystalSource.COMMAND || source == CrystalSource.SALE) {
-            IncrementCrystalsEvent event = new IncrementCrystalsEvent(amount, source);
-            event.callEvent();
-            if (event.isCancelled()) {
-                return;
-            }
-            amount = event.getAmount();
-        }
-
-        if (crystals.isPresent()) {
-            playerData.updateDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT, crystals.get() + amount);
-        } else {
-            playerData.updateDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT, amount);
-        }
-        plugin.getLogger().info("Added " + amount + " crystals to " + player.getName());
-    }
-
-    @Override
-    public void setCrystals(Player player, int amount, CrystalSource source) {
-        PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
-        Optional<Integer> oldCrystalAmount = playerData.getDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
-        int difference;
-        if (oldCrystalAmount.isPresent()) {
-            difference = amount - oldCrystalAmount.get();
-        } else {
-            difference = amount;
-        }
-
-        if (source == CrystalSource.COMMAND || source == CrystalSource.SALE) {
-            if (difference > 0) {
-                IncrementCrystalsEvent event = new IncrementCrystalsEvent(difference, source);
-                event.callEvent();
-                if (event.isCancelled()) {
-                    return;
-                }
-            } else {
-                DecrementCrystalsEvent event = new DecrementCrystalsEvent(Math.abs(difference), source);
-                event.callEvent();
-                if (event.isCancelled()) {
-                    return;
-                }
-            }
-        }
-        playerData.updateDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT, amount);
-        plugin.getLogger().info("Set " + player.getName() + "'s crystals to " + amount);
-    }
-
-    @Override
-    public void removeCrystals(Player player, int amount, CrystalSource source) {
-        PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
-        Optional<Integer> crystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
-        if (crystals.isEmpty()) {
-            return;
-        }
-        DecrementCrystalsEvent decrementEvent = new DecrementCrystalsEvent(amount, source);
-        decrementEvent.callEvent();
-        if (decrementEvent.isCancelled()) {
-            return;
-        }
-        playerData.updateDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT, crystals.get() - decrementEvent.getAmount());
-        if (source == CrystalSource.SALE) {
-            plugin.getStatistics().setCrystalsSpent(plugin.getStatistics().getCrystalsSpent() + decrementEvent.getAmount());
-        } else {
-            plugin.getStatistics().setCrystalsLost(plugin.getStatistics().getCrystalsLost() + decrementEvent.getAmount());
-        }
-        plugin.getLogger().info("Removed " + decrementEvent.getAmount() + " crystals from " + player.getName());
-    }
-
-    @Override
-    public int getCrystals(Player player) {
-        Optional<Integer> crystalAmount = plugin.getPlayerDataService().getData(player.getUniqueId()).getDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
-        return crystalAmount.orElse(0);
     }
 
 }

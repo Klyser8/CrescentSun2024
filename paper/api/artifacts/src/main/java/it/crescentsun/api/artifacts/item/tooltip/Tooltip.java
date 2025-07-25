@@ -45,7 +45,6 @@ public class Tooltip {
      * Creates a formatted header string for the tooltip. This will then be parsed by the MiniMessage library.
      *
      * @param headerText the text of the header
-     * @param totalLength the total length of the header line
      * @param leftDashFormat the format for the left dashes
      * @param headerFormat the format for the header text
      * @param rightDashFormat the format for the right dashes

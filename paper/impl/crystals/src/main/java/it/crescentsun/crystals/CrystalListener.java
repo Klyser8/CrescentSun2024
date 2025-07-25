@@ -49,6 +49,13 @@ public class CrystalListener implements Listener {
             plugin.getCrystalsService().spawnCrystals(player, 1, CrystalSource.ADVANCEMENT,
                     CrystalSpawnAnimation.HOVER, player.getLocation().add(0, 1, 0));
         }
+
+        // If the player gets any advancement, we assume they have claimed their crystals. TODO: TEST!
+        PlayerData playerData = plugin.getPlayerDataService().getData(player);
+        Optional<Boolean> hasPlayerClaimedCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_CLAIMED);
+        if (hasPlayerClaimedCrystals.isPresent() && hasPlayerClaimedCrystals.get()) {
+            playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_CLAIMED, true);
+        }
     }
 
     @EventHandler
@@ -59,7 +66,7 @@ public class CrystalListener implements Listener {
         if (!plugin.getCrescentCoreAPI().getServerName().contains("crescentcraft")) {
             return;
         }
-        Optional<Boolean> dataValue = playerData.getDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTALS_CLAIMED);
+        Optional<Boolean> dataValue = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_CLAIMED);
         if (dataValue.isPresent() && dataValue.get()) {
             return;
         }
@@ -77,7 +84,7 @@ public class CrystalListener implements Listener {
         if (crystalsToSpawn > 0) {
             plugin.getCrystalsService().spawnCrystals(player, crystalsToSpawn, CrystalSource.ADVANCEMENT,
                     CrystalSpawnAnimation.CIRCLING_EXPLOSION, player.getLocation().add(0, 1, 0));
-            playerData.updateDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTALS_CLAIMED, true);
+            playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_CLAIMED, true);
         }
     }
 
@@ -90,8 +97,8 @@ public class CrystalListener implements Listener {
         }
         int amount = event.getAmount();
         PlayerData playerData = plugin.getPlayerDataService().getData(player);
-        Optional<Integer> currentCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
-        playerData.updateDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT, amount + currentCrystals.orElse(0));
+        Optional<Integer> currentCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED);
+        playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED, amount + currentCrystals.orElse(0));
         player.sendMessage(miniMessage.deserialize(
                 CrescentHexCodes.ICE_CITADEL + amount + CrescentHexCodes.DROPLET + " crystal(s) have appeared before you. Keep them safe!" ));
     }

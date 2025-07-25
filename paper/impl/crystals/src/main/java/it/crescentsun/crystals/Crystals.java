@@ -21,6 +21,9 @@ import it.crescentsun.crystals.artifact.CrystalArtifact;
 import it.crescentsun.crystals.data.CrystalsSettings;
 import it.crescentsun.crystals.data.CrystalsStatistics;
 import it.crescentsun.crystals.sound.CrystalsSFX;
+import it.crescentsun.crystals.vault.VaultData;
+import it.crescentsun.crystals.vault.VaultListener;
+import it.crescentsun.crystals.vault.VaultManager;
 import it.crescentsun.triumphcmd.bukkit.BukkitCommandManager;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
@@ -45,12 +48,15 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
     private CrystalsAPI crystalsAPI;
     private CrystalsSFX crystalsSFX;
 
+    private VaultManager vaultManager;
+
     private ArtifactRegistryService artifactRegistryService;
 
     @Override
     public void onEnable() {
         initServices();
         crystalsSFX = new CrystalsSFX(this);
+        vaultManager = new VaultManager(this, pluginDataService);
         BukkitCommandManager<CommandSender> commandManager = BukkitCommandManager.create(this);
         commandManager.registerCommand(new CrystalsCommands(this));
 
@@ -73,14 +79,18 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
 
     @Override
     public void onPlayerDataRegister(PlayerDataRegistryService service) {
-        service.registerDataDefinition(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT, DataType.INT,true, 0);
-        service.registerDataDefinition(DatabaseNamespacedKeys.PLAYERS_CRYSTALS_CLAIMED, DataType.BOOLEAN, true, false);
+        // How many crystals the player has in their vault
+        service.registerDataDefinition(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED, DataType.INT,true, 0);
+        service.registerDataDefinition(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT, DataType.INT,true, 0);
+        // Whether the player has claimed their crystals from previous advancements. Shall be removed eventually.
+        service.registerDataDefinition(DatabaseNamespacedKeys.PLAYER_CRYSTALS_CLAIMED, DataType.BOOLEAN, true, false);
     }
 
     @Override
     public void onPluginDataRegister(PluginDataRegistryService service) {
         service.registerDataClass(this, CrystalsStatistics.class);
         service.registerDataClass(this, CrystalsSettings.class);
+        service.registerDataClass(this, VaultData.class);
     }
 
     @Override
@@ -89,6 +99,7 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
         crystalsService = new CrystalManager(this);
         crystalsAPI = this;
         Bukkit.getPluginManager().registerEvents(new CrystalListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
         serviceManager.register(CrystalsService.class, crystalsService, this, ServicePriority.Normal);
         serviceManager.register(CrystalsAPI.class, crystalsAPI, this, ServicePriority.Normal);
         try {
@@ -158,5 +169,9 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
 
     public CrystalsSFX getCrystalsSFX() {
         return crystalsSFX;
+    }
+
+    public VaultManager getVaultManager() {
+        return vaultManager;
     }
 }

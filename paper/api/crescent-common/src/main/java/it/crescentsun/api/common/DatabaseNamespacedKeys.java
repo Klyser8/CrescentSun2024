@@ -17,8 +17,9 @@ public class DatabaseNamespacedKeys {
     // jumpwarps
     public static final NamespacedKey PLAYER_JUMPWARPS_USED = new NamespacedKey(NAMESPACE_JUMPWARPS, "jumpwarps_used");
     // crystals
-    public static final NamespacedKey PLAYERS_CRYSTAL_AMOUNT = new NamespacedKey(NAMESPACE_CRYSTALS, "crystal_amount");
-    public static final NamespacedKey PLAYERS_CRYSTALS_CLAIMED = new NamespacedKey(NAMESPACE_CRYSTALS, "crystals_claimed");
+    public static final NamespacedKey PLAYER_CRYSTALS_SPAWNED = new NamespacedKey(NAMESPACE_CRYSTALS, "crystals_spawned"); //TODO: RENAME DATABASE COLUMN
+    public static final NamespacedKey PLAYER_CRYSTALS_IN_VAULT = new NamespacedKey(NAMESPACE_CRYSTALS, "crystals_in_vault");
+    public static final NamespacedKey PLAYER_CRYSTALS_CLAIMED = new NamespacedKey(NAMESPACE_CRYSTALS, "crystals_claimed"); //
     public static final NamespacedKey PLAYER_SHOW_CRYSTALIX = new NamespacedKey(NAMESPACE_CRYSTALS, "show_crystalix");
 
     // SERVER DATA

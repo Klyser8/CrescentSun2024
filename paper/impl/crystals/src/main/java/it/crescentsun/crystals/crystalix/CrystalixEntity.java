@@ -77,7 +77,7 @@ public class CrystalixEntity {
                 TextColor.color(189, 92, 255),
                 TextColor.color(167, 52, 255),
         };
-        Optional<Integer> crystals = ownerData.getDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
+        Optional<Integer> crystals = ownerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED);
         writtenCrystals = crystals.orElse(0);
         String crystalsString = String.valueOf(crystals);
         TextComponent name = Component.text("-[");

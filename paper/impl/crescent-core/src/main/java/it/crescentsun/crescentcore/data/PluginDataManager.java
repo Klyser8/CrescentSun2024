@@ -133,7 +133,6 @@ public class PluginDataManager implements PluginDataService {
             throw new ClassNotRegisteredException("Couldn't insert data instance: Class not registered: " + dataClass.getName());
         }
 
-        pluginData.resolveOwningPlugin();
         PluginDataIdentifier<? extends PluginData> identifier = new PluginDataIdentifier<>(dataClass, uuid);
         if (getData(identifier) != null && !shouldReplace) {
             crescentCore.getLogger().warning("Data instance already exists for identifier " + identifier + ", yet the new one was marked as not to replace. Ignoring.");
@@ -168,12 +167,13 @@ public class PluginDataManager implements PluginDataService {
             crescentCore.getLogger().warning("No save query template found for table " + fullTableName);
             return null;
         }
+
         try (Connection connection = dbManager.getConnection();
              PreparedStatement statement = connection.prepareStatement(queryTemplate)) {
             connection.setAutoCommit(false);
             connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
             try {
-                // Acquire a pessimistic lock on the row we are about to modify
                 Pair<Field, DatabaseColumn> pkPair = getPrimaryKeyField(dataClass);
                 if (pkPair != null) {
                     UUID uuid = (UUID) pkPair.key().get(pluginData);
@@ -182,30 +182,53 @@ public class PluginDataManager implements PluginDataService {
 
                 int index = 1;
                 for (Field field : getSerializableFields(dataClass).keySet()) {
-                    if (field.equals(getPrimaryKeyField(dataClass).key())) {
-                        if (!(field.get(pluginData) instanceof UUID)) {
-                            crescentCore.getLogger().severe("Error while saving plugin data: primary key field is not of type UUID for table " + fullTableName);
-                            throw new IllegalStateException("Primary key field is not of type UUID for table " + fullTableName);
+                    Object value = field.get(pluginData);
+
+                    if (field.equals(pkPair.key())) {
+                        if (!(value instanceof UUID)) {
+                            crescentCore.getLogger().severe(
+                                    "Error while saving plugin data: primary key field is not of type UUID for table " + fullTableName
+                            );
+                            throw new IllegalStateException(
+                                    "Primary key field is not of type UUID for table " + fullTableName
+                            );
                         }
                     }
-                    statement.setObject(index++, field.get(pluginData).toString());
+
+                    if (value instanceof UUID) {
+                        statement.setString(index++, value.toString());
+                    } else if (value instanceof Boolean) {
+                        statement.setBoolean(index++, (Boolean) value);
+                    } else {
+                        statement.setObject(index++, value);
+                    }
                 }
 
                 statement.executeUpdate();
                 connection.commit();
-                crescentCore.getLogger().info("Successfully saved plugin data to the database for table " + fullTableName + " in " + (System.currentTimeMillis() - startTime) + "ms");
+                crescentCore.getLogger().info(
+                        "Successfully saved plugin data to the database for table "
+                                + fullTableName + " in " + (System.currentTimeMillis() - startTime) + "ms"
+                );
                 return pluginData;
+
             } catch (SQLException e) {
-                connection.rollback();
+                connection.rollback(); //
                 throw e;
             } finally {
                 connection.setAutoCommit(true);
             }
+
         } catch (SQLException e) {
-            crescentCore.getLogger().severe("An error occurred while saving plugin data to the database: " + e.getMessage());
+            crescentCore.getLogger().severe(
+                    "An error occurred while saving plugin data to the database: " + e.getMessage()
+            );
         } catch (IllegalAccessException e) {
-            crescentCore.getLogger().severe("An error occurred while accessing plugin data fields: " + e.getMessage());
+            crescentCore.getLogger().severe(
+                    "An error occurred while accessing plugin data fields: " + e.getMessage()
+            );
         }
+
         throw new IllegalStateException("Failed to save plugin data to the database.");
     }
 
@@ -232,7 +255,6 @@ public class PluginDataManager implements PluginDataService {
                 Constructor<? extends PluginData> constructor = dataClass.getDeclaredConstructor();
                 constructor.setAccessible(true);
                 dataInstance = constructor.newInstance();
-                dataInstance.resolveOwningPlugin();
                 if (resultSet.next()) {
                     int index = 1;
                     for (Field field : getSerializableFields(dataClass).keySet()) {
@@ -362,7 +384,6 @@ public class PluginDataManager implements PluginDataService {
                             Constructor<? extends PluginData> constructor = dataClass.getDeclaredConstructor();
                             constructor.setAccessible(true);
                             PluginData dataInstance = constructor.newInstance();
-                            dataInstance.resolveOwningPlugin();
 
                             int index = 1; // Index used to retrieve the values from the result set
                             UUID uuid = null; // The key used to store the instance in the repository

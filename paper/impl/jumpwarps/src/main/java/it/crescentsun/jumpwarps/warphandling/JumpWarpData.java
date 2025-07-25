@@ -102,7 +102,7 @@ public class JumpWarpData extends PluginData {
         if (serverName == null) {
             return false;
         }
-        return serverName.equalsIgnoreCase(server); //Destination server should be checked instead of the originating server, as the method is run on all servers but the originating one.
+        return serverName.equalsIgnoreCase(server);
     }
 
     public Location getLocation() {

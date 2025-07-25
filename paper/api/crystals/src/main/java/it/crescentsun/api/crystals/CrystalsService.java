@@ -10,12 +10,12 @@ import org.jetbrains.annotations.Nullable;
 public interface CrystalsService {
 
     /**
-     * Spawn the chosen amount of crystals as an item entity, with the specified animation.
+     * Spawn the chosen number of crystals as an item entity, with the specified animation.
      * The owner indicates who the crystals are spawned for, and who has priority to pick them up.
      * If the owner is null, the crystals are spawned for anyone to pick up.
      *
      * @param owner The player who the crystals are spawned for. Null if the crystals are spawned for anyone.
-     * @param amount The amount of crystals to spawn.
+     * @param amount The number of crystals to spawn.
      * @param source The source of the crystals.
      * @param spawnAnimation The animation to play when the crystals are spawned.
      * @param spawnLocation The location to spawn the crystals at. Null if the player's location should be used.
@@ -26,51 +26,45 @@ public interface CrystalsService {
     }
 
     /**
-     * Add the specified amount of crystals to the player's balance.
-     * The source indicates where the crystals are coming from.
-     *
-     * @param player The player to add the crystals to.
-     * @param amount The amount of crystals to add.
-     * @param source The source of the crystals.
-     */
-    void addCrystals(Player player, int amount, CrystalSource source);
-    default void addCrystals(Player player, int amount) {
-        addCrystals(player, amount, CrystalSource.COMMAND);
-    }
-
-    /**
-     * Set the player's crystal balance to the specified amount.
-     * The source indicates where the crystals are coming from.
-     *
-     * @param player The player to set the crystals for.
-     * @param amount The amount of crystals to set.
-     * @param source The source of the crystals.
-     */
-    void setCrystals(Player player, int amount, CrystalSource source);
-    default void setCrystals(Player player, int amount) {
-        setCrystals(player, amount, CrystalSource.COMMAND);
-    }
-
-    /**
-     * Remove the specified amount of crystals from the player's balance.
-     * The source indicates the reason for removal.
-     *
-     * @param player The player to remove the crystals from.
-     * @param amount The amount of crystals to remove.
-     * @param source The source of the removal.
-     */
-    void removeCrystals(Player player, int amount, CrystalSource source);
-    default void removeCrystals(Player player, int amount) {
-        removeCrystals(player, amount, CrystalSource.COMMAND);
-    }
-
-    /**
-     * Get the amount of crystals the player has.
+     * Get the number of crystals spawned in the network for a specific player
      * This is done through the usage of the PlayerData API.
      *
      * @param player The player to get the crystals for.
-     * @return The amount of crystals the player has.
+     * @return The number of crystals the player has spawned
      */
-    int getCrystals(Player player);
+    int getCrystalsSpawned(Player player);
+
+    /**
+     * Get the number of crystals in the vault of a specific player.
+     * This is done through the usage of the PlayerData API.
+     *
+     * @param player The player to get the crystals for.
+     * @return The number of crystals in the player's vault
+     */
+    int getCrystalsInVault(Player player);
+
+    /**
+     * Adds a specified number of crystals to the player's vault.
+     *
+     * @param player the player whose vault to add crystals to
+     * @param amount the number of crystals to add
+     */
+    void addCrystalsToVault(Player player, int amount);
+
+    /**
+     * Removes a specified number of crystals from the player's vault.
+     *
+     * @param player the player whose vault to remove crystals from
+     * @param amount the number of crystals to remove
+     */
+    void removeCrystalsFromVault(Player player, int amount);
+
+    /**
+     * Sets the player's vault crystals to the specified amount.
+     *
+     * @param player the player whose vault to set crystals for
+     * @param amount the new total number of crystals in the vault
+     */
+    void setCrystalsInVault(Player player, int amount);
 
 }

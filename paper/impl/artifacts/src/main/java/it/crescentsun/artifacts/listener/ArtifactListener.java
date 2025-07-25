@@ -1,8 +1,6 @@
 package it.crescentsun.artifacts.listener;
 
 import it.crescentsun.api.artifacts.ArtifactProvider;
-import it.crescentsun.api.common.ArtifactNamespacedKeys;
-import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.api.crescentcore.sound.SoundEffect;
 import it.crescentsun.api.crescentcore.util.ItemUtils;
 import it.crescentsun.api.crescentcore.util.PlayerUtils;

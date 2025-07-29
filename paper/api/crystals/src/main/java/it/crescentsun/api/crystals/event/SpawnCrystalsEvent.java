@@ -7,14 +7,14 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Event called when the amount of crystals in the network is increased.
+ * Event called when one or more crystals are spawned anywhere in the network
  */
-public class IncrementCrystalsEvent extends Event implements Cancellable {
+public class SpawnCrystalsEvent extends Event implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
     private int amount;
     private final CrystalSource source;
     private boolean cancelled;
-    public IncrementCrystalsEvent(int amount, CrystalSource generationSource) {
+    public SpawnCrystalsEvent(int amount, CrystalSource generationSource) {
         this.amount = amount;
         this.source = generationSource;
     }

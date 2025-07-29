@@ -8,10 +8,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.World;
-import org.bukkit.entity.BlockDisplay;
-import org.bukkit.entity.Display;
-import org.bukkit.entity.TextDisplay;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.joml.Matrix4f;
@@ -25,8 +23,9 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
 
     private final Crystals plugin;
     private final BlockDisplay vaultEntity;
-    private final TextDisplay textDisplay;
+    final TextDisplay textDisplay;
     private final BlockDisplay[] lanterns = new BlockDisplay[2];
+    private final Interaction interactionEntity;
     private final Matrix4f vaultMatrix;
     private final Matrix4f lanternBaseMatrix;
     private final Player owner;
@@ -55,48 +54,59 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
                 .translate(-0.5f, -0.5f, -0.5f);
 
         // 1) Vault BlockDisplay
-        vaultEntity = owner.getWorld().spawn(
-                vaultData.getLocation().add(0.5, 2.0, 0.5),
+        World world = owner.getWorld();
+        Location vaultOrigin = vaultData.getLocation().add(0.5, 2.0, 0.5);
+        vaultEntity = world.spawn(
+                vaultOrigin,
                 BlockDisplay.class, bd -> {
                     bd.setBlock(Material.BEACON.createBlockData());
                     bd.setGravity(false);
                     bd.setTransformationMatrix(vaultMatrix);
+                    bd.setMetadata(VaultData.VAULT_KEY.getKey(), new FixedMetadataValue(plugin, vaultData.getUuid()));
                 }
         );
 
         // 2) TextDisplay
-        textDisplay = owner.getWorld().spawn(
+        textDisplay = world.spawn(
                 vaultData.getLocation().add(0.5, 2.5, 0.5),
                 TextDisplay.class, td -> {
-                    Optional<Integer> inVault = plugin.getPlayerDataService()
-                            .getData(owner)
-                            .getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
                     td.setBillboard(Display.Billboard.CENTER);
                     td.setGravity(false);
-                    td.setViewRange(0.05f);
-                    td.setVisibleByDefault(false);
-                    owner.showEntity(plugin, td);
-                    td.text(MiniMessage.miniMessage().deserialize(
-                            CrescentHexCodes.ICE_CITADEL + "Crystal Vault" +
-                                    CrescentHexCodes.WHITE + " - " +
-                                    CrescentHexCodes.DROPLET + inVault.orElse(0)
-                    ));
+
+                    // Public vaults should be visible from a distance and have a different title
+                    if (vaultData.isPublic()) {
+                        td.setVisibleByDefault(true);
+                        td.text(MiniMessage.miniMessage().deserialize(CrescentHexCodes.ICE_CITADEL + "Public Crystal Vault"));
+                    } else {
+                        td.setViewRange(0.05f);
+                        td.setVisibleByDefault(false);
+                        owner.showEntity(plugin, td);
+                    }
                 }
         );
 
         // 3) Two orbiting lanterns, initially invisible at center
         for (int i = 0; i < lanterns.length; i++) {
-            lanterns[i] = owner.getWorld().spawn(
-                    vaultData.getLocation().add(0.5, 2.0, 0.5),
+            lanterns[i] = world.spawn(
+                    vaultOrigin,
                     BlockDisplay.class, ld -> {
                         ld.setBlock(Material.CONDUIT.createBlockData());
                         ld.setGravity(false);
                         ld.setInterpolationDelay(0);
                         ld.setInterpolationDuration(3);
                         ld.setTransformationMatrix(lanternBaseMatrix);
+                        ld.setMetadata(VaultData.VAULT_KEY.getKey(), new FixedMetadataValue(plugin, vaultData.getUuid()));
                     }
             );
         }
+
+        interactionEntity = world.spawn(vaultOrigin.add(0, -0.12, 0), Interaction.class, entity -> {
+            entity.setInteractionHeight(0.75f);
+            entity.setInteractionWidth(0.6f);
+            entity.setResponsive(true);
+            entity.setGravity(false);
+            entity.setMetadata(VaultData.VAULT_KEY.getKey(), new FixedMetadataValue(plugin, vaultData.getUuid()));
+        });
     }
 
     @Override
@@ -105,12 +115,14 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
 
         // cleanup if invalid
         if (!vaultEntity.isValid() || !textDisplay.isValid()
-                || !lanterns[0].isValid() || !lanterns[1].isValid()) {
+                || !lanterns[0].isValid() || !lanterns[1].isValid() || !interactionEntity.isValid() ||
+                plugin.getVaultManager().getDataInstance(vaultData.getUuid()) == null) {
             task.cancel();
             vaultEntity.remove();
             textDisplay.remove();
             lanterns[0].remove();
             lanterns[1].remove();
+            interactionEntity.remove();
             return;
         }
 

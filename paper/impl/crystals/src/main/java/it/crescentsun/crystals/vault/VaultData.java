@@ -1,17 +1,24 @@
 package it.crescentsun.crystals.vault;
 
+import it.crescentsun.api.common.DatabaseNamespacedKeys;
 import it.crescentsun.api.crescentcore.data.DataType;
 import it.crescentsun.api.crescentcore.data.plugin.DatabaseColumn;
 import it.crescentsun.api.crescentcore.data.plugin.DatabaseTable;
 import it.crescentsun.api.crescentcore.data.plugin.PluginData;
+import it.crescentsun.api.crescentcore.data.plugin.PluginDataIdentifier;
+import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import it.crescentsun.crystals.Crystals;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 @DatabaseTable(tableName = "vaults", plugin = Crystals.class)
@@ -41,7 +48,10 @@ public class VaultData extends PluginData {
     @DatabaseColumn(columnName = "z", dataType = DataType.INT, order = 7)
     private int z;
 
-    transient private Consumer<BukkitTask> bukkitTask;
+    transient private VaultScheduledTask bukkitTask;
+
+    /// The key used to identify vaults in the crescent sun network
+    public static final NamespacedKey VAULT_KEY = Crystals.id("vault");
 
     public VaultData(Crystals plugin, UUID uuid, UUID ownerUuid, boolean isPublic, String server, Location location) {
         super();
@@ -86,6 +96,7 @@ public class VaultData extends PluginData {
             }
             this.bukkitTask = new VaultScheduledTask((Crystals) owningPlugin, owner, this);
             Bukkit.getScheduler().runTaskTimer(owningPlugin, bukkitTask, 0, 1);
+            refreshVaultNameTag();
         }
         return initialized;
     }
@@ -101,6 +112,16 @@ public class VaultData extends PluginData {
             owningPlugin.getLogger().warning("World with UUID " + worldUUID + " not found while trying to fetch location for VaultData " + this);
         }
         return new Location(world, x, y, z);
+    }
+
+    public void refreshVaultNameTag() {
+        Optional<Integer> inVault = owningPlugin.getPlayerDataService()
+                .getData(ownerUuid)
+                .getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
+        bukkitTask.textDisplay.text(MiniMessage.miniMessage().deserialize(
+                CrescentHexCodes.ICE_CITADEL + Bukkit.getOfflinePlayer(ownerUuid).getName() + "'s Crystal Vault" +
+                        CrescentHexCodes.WHITE + " - " +
+                        CrescentHexCodes.DROPLET + inVault.orElse(0)));
     }
 
     public void setUuid(UUID uuid) {
@@ -161,5 +182,31 @@ public class VaultData extends PluginData {
 
     public void setZ(int z) {
         this.z = z;
+    }
+
+    @Override
+    public <T extends PluginData> CompletableFuture<PluginDataIdentifier<T>> deleteAndSync() {
+        CompletableFuture<PluginDataIdentifier<T>> pluginDataIdentifierCompletableFuture = super.deleteAndSync();
+        // Cancel the scheduled task if it exists
+        if (bukkitTask != null) {
+
+        }
+        return pluginDataIdentifierCompletableFuture;
+    }
+
+    /**
+     * Gets the locations of the vault structure blocks.
+     * The first in the array is always the block underneath the vault, while the remaining four are the cross-shaped diamond blocks around it.
+     * @return the array of locations related to this vault
+     */
+    public Location[] getVaultStructureLocations() {
+        Location[] locations = new Location[] {
+                getLocation().clone().add(0, -1, 0),
+                getLocation().clone().add(1, -1, 0),
+                getLocation().clone().add(-1, -1, 0),
+                getLocation().clone().add(0, -1, 1),
+                getLocation().clone().add(0, -1, -1),
+        };
+        return locations;
     }
 }

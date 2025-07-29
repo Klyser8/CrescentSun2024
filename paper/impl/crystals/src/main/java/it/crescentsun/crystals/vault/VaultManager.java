@@ -2,11 +2,13 @@ package it.crescentsun.crystals.vault;
 
 import it.crescentsun.api.crescentcore.data.plugin.AbstractPluginDataManager;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataService;
+import it.crescentsun.api.crescentcore.util.VectorUtils;
 import it.crescentsun.crystals.Crystals;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3i;
 
 import java.util.UUID;
@@ -39,6 +41,41 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
         vaultData.tryInit();
         vaultData.saveAndSync();
         return vaultData;
+    }
+
+    /**
+     * Gets the VaultData object found at the specified location, if any.
+     *
+     * @param location The location to check.
+     * @return The VaultData object at the given location or null if none is found.
+     */
+    @Nullable
+    public VaultData getVaultAtLocation(Location location) {
+        // Loop through all initialized VaultData instances
+        for (VaultData vault : getAllData(true)) {
+            if (VectorUtils.isInSameBlockLocation(location, vault.getLocation())) {
+                return vault;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gets the closest Vault from the specified location. May be null if none is found in the world.
+     * @param location The location to check.
+     * @return The closest Vault to the location, or null if none is found.
+     */
+    @Nullable public VaultData getClosestVault(Location location) {
+        VaultData closestVault = null;
+        double closestDistance = Double.MAX_VALUE;
+        for (VaultData vault : getAllData(true)) {
+            double distance = location.distanceSquared(vault.getLocation());
+            if (distance < closestDistance) {
+                closestVault = vault;
+                closestDistance = distance;
+            }
+        }
+        return closestVault;
     }
 
     /**

@@ -26,6 +26,19 @@ public interface CrystalsService {
     }
 
     /**
+     * Drop the specified number of crystals as item entities at the specified location.
+     * Unlike the spawnCrystals method, this method does not play any animation and is simply dropped as an item in the world
+     *
+     * @param owner The player who the crystals are dropped for. Null if the crystals are dropped for anyone to pick up.
+     * @param location The location to drop the crystals at.
+     * @param amount The number of crystals to drop. Up to 99.
+     */
+    void dropCrystals(@Nullable Player owner, Location location, int amount);
+    default void dropCrystals(Location location, int amount) {
+        dropCrystals(null, location, amount);
+    }
+
+    /**
      * Get the number of crystals spawned in the network for a specific player
      * This is done through the usage of the PlayerData API.
      *

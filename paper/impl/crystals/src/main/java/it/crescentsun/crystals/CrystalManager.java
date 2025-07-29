@@ -9,7 +9,6 @@ import it.crescentsun.api.crescentcore.util.VectorUtils;
 import it.crescentsun.api.crystals.CrystalSource;
 import it.crescentsun.api.crystals.CrystalSpawnAnimation;
 import it.crescentsun.api.crystals.CrystalsService;
-import it.crescentsun.api.crystals.event.DecrementCrystalsEvent;
 import it.crescentsun.api.crystals.event.GenerateCrystalsEvent;
 import it.crescentsun.api.crystals.event.IncrementCrystalsEvent;
 import org.bukkit.*;
@@ -51,6 +50,17 @@ public class CrystalManager implements CrystalsService {
         } else if (spawnAnimation == CrystalSpawnAnimation.HOVER) {
             hover(player, crystalStack, source, spawnLocation);
         }
+    }
+
+    @Override
+    public void dropCrystals(@Nullable Player owner, Location location, int amount) {
+        if (amount < 1 || amount > 99) {
+            plugin.getLogger().warning("Amount of crystals to drop is out of bounds. Defaulting to 1");
+            amount = 1;
+        }
+        ItemStack crystalStack = plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL).createStack(amount);
+        Item crystalItem = location.getWorld().dropItem(location, crystalStack);
+        crystalItem.setPickupDelay(20); //TODO: FINISH IMPLEMENTING LOGIC FOR CRYSTAL DROPS
     }
 
     @Override

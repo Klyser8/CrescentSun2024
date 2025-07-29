@@ -7,14 +7,14 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Event called when the amount of crystals in the network is decreased.
+ * Event called when one or more crystals are added to a player's vault.
  */
-public class DecrementCrystalsEvent extends Event implements Cancellable {
+public class AddCrystalsEvent extends Event implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
     private int amount;
     private final CrystalSource source;
     private boolean cancelled;
-    public DecrementCrystalsEvent(int amount, CrystalSource generationSource) {
+    public AddCrystalsEvent(int amount, CrystalSource generationSource) {
         this.amount = amount;
         this.source = generationSource;
     }
@@ -39,7 +39,7 @@ public class DecrementCrystalsEvent extends Event implements Cancellable {
     }
 
     /**
-     * @return The reason the crystals are being decremented.
+     * @return The reason the crystals are being incremented.
      */
     public CrystalSource getSource() {
         return source;

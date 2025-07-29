@@ -8,7 +8,7 @@ velocity-api = "3.4.0-SNAPSHOT"
 crescent-core-api = "2.0.5a"
 crescent-common = "1.0.6"
 artifacts-api = "1.0.21"
-crystals-api = "1.0.7"
+crystals-api = "1.0.8"
 triumphcmd = "1.0.0"
 
 # Other dependencies

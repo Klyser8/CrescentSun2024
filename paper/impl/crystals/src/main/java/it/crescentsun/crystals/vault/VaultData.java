@@ -6,20 +6,16 @@ import it.crescentsun.api.crescentcore.data.plugin.DatabaseColumn;
 import it.crescentsun.api.crescentcore.data.plugin.DatabaseTable;
 import it.crescentsun.api.crescentcore.data.plugin.PluginData;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataIdentifier;
+import it.crescentsun.api.crystals.VaultService;
 import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import it.crescentsun.crystals.Crystals;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 @DatabaseTable(tableName = "vaults", plugin = Crystals.class)
 public class VaultData extends PluginData {
@@ -74,6 +70,10 @@ public class VaultData extends PluginData {
         return uuid;
     }
 
+    public UUID getOwnerUUID() {
+        return ownerUuid;
+    }
+
     @Override
     protected boolean shouldInit() {
         if (server == null) {
@@ -89,12 +89,7 @@ public class VaultData extends PluginData {
     @Override
     public boolean tryInit() {
         if (super.tryInit()) {
-            Player owner = Bukkit.getPlayer(ownerUuid);
-            if (owner == null) {
-                owningPlugin.getLogger().warning("Owner with UUID " + ownerUuid + " not found while trying to initialize VaultData " + this);
-                return false;
-            }
-            this.bukkitTask = new VaultScheduledTask((Crystals) owningPlugin, owner, this);
+            this.bukkitTask = new VaultScheduledTask((Crystals) owningPlugin, ownerUuid, this);
             Bukkit.getScheduler().runTaskTimer(owningPlugin, bukkitTask, 0, 1);
             refreshVaultNameTag();
         }
@@ -136,6 +131,10 @@ public class VaultData extends PluginData {
         this.ownerUuid = ownerUuid;
     }
 
+    public OfflinePlayer getOwner() {
+        return Bukkit.getOfflinePlayer(ownerUuid);
+    }
+
     public boolean isPublic() {
         return isPublic;
     }
@@ -144,15 +143,15 @@ public class VaultData extends PluginData {
         isPublic = aPublic;
     }
 
-    public String getServer() {
+    public String getServerName() {
         return server;
     }
 
-    public void setServer(String server) {
+    public void setServerName(String server) {
         this.server = server;
     }
 
-    public UUID getWorldUUID() {
+    public UUID getWorldUuid() {
         return worldUUID;
     }
 

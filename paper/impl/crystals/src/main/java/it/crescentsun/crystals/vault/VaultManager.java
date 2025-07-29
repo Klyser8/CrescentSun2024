@@ -3,6 +3,8 @@ package it.crescentsun.crystals.vault;
 import it.crescentsun.api.crescentcore.data.plugin.AbstractPluginDataManager;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataService;
 import it.crescentsun.api.crescentcore.util.VectorUtils;
+import it.crescentsun.api.crystals.VaultService;
+import it.crescentsun.api.crystals.event.CreateVaultEvent;
 import it.crescentsun.crystals.Crystals;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -11,9 +13,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3i;
 
+import java.util.Comparator;
 import java.util.UUID;
 
-public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData> {
+public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData> implements VaultService {
 
     public VaultManager(Crystals plugin, PluginDataService pluginDataService) {
         super(plugin, VaultData.class, pluginDataService);
@@ -30,13 +33,19 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
         if (owner == null || location == null) {
             return null;
         }
+        UUID vaultUUID = UUID.randomUUID();
+        CreateVaultEvent event = new CreateVaultEvent(vaultUUID, owner, location, isPublic);
+        event.callEvent();
+        if (event.isCancelled()) {
+            return null;
+        }
         VaultData vaultData = new VaultData(
                 plugin,
-                UUID.randomUUID(),
-                owner.getUniqueId(),
-                isPublic,
+                event.getVaultUuid(),
+                event.getOwner().getUniqueId(),
+                event.isVaultPublic(),
                 plugin.getCrescentCoreAPI().getServerName(),
-                location
+                event.getVaultLocation()
         );
         vaultData.tryInit();
         vaultData.saveAndSync();
@@ -51,13 +60,16 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
      */
     @Nullable
     public VaultData getVaultAtLocation(Location location) {
-        // Loop through all initialized VaultData instances
-        for (VaultData vault : getAllData(true)) {
-            if (VectorUtils.isInSameBlockLocation(location, vault.getLocation())) {
-                return vault;
-            }
-        }
-        return null;
+        return getAllData(true).stream()
+                .filter(vault -> VectorUtils.isInSameBlockLocation(location, vault.getLocation()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    public UUID getVaultUUIDAtLocation(Location location) {
+        VaultData vault = getVaultAtLocation(location);
+        return vault != null ? vault.getUuid() : null;
     }
 
     /**
@@ -66,16 +78,15 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
      * @return The closest Vault to the location, or null if none is found.
      */
     @Nullable public VaultData getClosestVault(Location location) {
-        VaultData closestVault = null;
-        double closestDistance = Double.MAX_VALUE;
-        for (VaultData vault : getAllData(true)) {
-            double distance = location.distanceSquared(vault.getLocation());
-            if (distance < closestDistance) {
-                closestVault = vault;
-                closestDistance = distance;
-            }
-        }
-        return closestVault;
+        return getAllData(true).stream()
+                .min(Comparator.comparingDouble(vault -> location.distanceSquared(vault.getLocation())))
+                .orElse(null);
+    }
+
+    @Override
+    public UUID getClosestVaultUUID(Location location) {
+        VaultData vault = getClosestVault(location);
+        return vault != null ? vault.getUuid() : null;
     }
 
     /**
@@ -104,5 +115,13 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
             }
         }
         return true;
+    }
+
+    @Override
+    public UUID[] getVaultsByOwner(UUID ownerUUID) {
+        return getAllData(true).stream()
+                .filter(vault -> vault.getOwnerUUID().equals(ownerUUID))
+                .map(VaultData::getUuid)
+                .toArray(UUID[]::new);
     }
 }

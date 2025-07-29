@@ -32,10 +32,11 @@ public interface CrystalsService {
      * @param owner The player who the crystals are dropped for. Null if the crystals are dropped for anyone to pick up.
      * @param location The location to drop the crystals at.
      * @param amount The number of crystals to drop. Up to 99.
+     * @param dropReason The reason the crystals are being dropped, used for tracking purposes.
      */
-    void dropCrystals(@Nullable Player owner, Location location, int amount);
-    default void dropCrystals(Location location, int amount) {
-        dropCrystals(null, location, amount);
+    void dropCrystals(@Nullable Player owner, Location location, int amount, CrystalSource dropReason);
+    default void dropCrystals(Location location, int amount, CrystalSource dropReason) {
+        dropCrystals(null, location, amount, dropReason);
     }
 
     /**

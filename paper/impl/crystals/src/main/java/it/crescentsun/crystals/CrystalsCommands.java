@@ -1,15 +1,11 @@
 package it.crescentsun.crystals;
 
-import it.crescentsun.api.common.DatabaseNamespacedKeys;
-import it.crescentsun.api.crescentcore.data.player.PlayerData;
 import it.crescentsun.api.crystals.CrystalSource;
 import it.crescentsun.api.crystals.CrystalSpawnAnimation;
-import it.crescentsun.api.crystals.event.GenerateCrystalsEvent;
 import it.crescentsun.crescentmsg.api.MessageFormatter;
 import it.crescentsun.crescentmsg.api.MessageType;
 import it.crescentsun.triumphcmd.bukkit.annotation.Permission;
 import it.crescentsun.triumphcmd.core.annotations.Command;
-import it.crescentsun.triumphcmd.core.annotations.Optional;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.command.CommandSender;

@@ -19,6 +19,10 @@ public enum CrystalSource {
      */
     MOB_DROP,
     /**
+     * The player gained crystals through a block drop
+     */
+    BLOCK_DROP,
+    /**
      * The player gained crystals through a chest loot.
      */
     CHEST_LOOT,

@@ -9,8 +9,9 @@ import it.crescentsun.api.crescentcore.data.player.PlayerData;
 import it.crescentsun.api.crescentcore.event.player.PlayerJoinEventPostDBLoad;
 import it.crescentsun.api.crystals.CrystalSource;
 import it.crescentsun.api.crystals.CrystalSpawnAnimation;
-import it.crescentsun.api.crystals.event.GenerateCrystalsEvent;
-import it.crescentsun.api.crystals.event.IncrementCrystalsEvent;
+import it.crescentsun.api.crystals.event.AddCrystalsEvent;
+import it.crescentsun.api.crystals.event.RemoveCrystalsEvent;
+import it.crescentsun.api.crystals.event.SpawnCrystalsEvent;
 import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -87,9 +88,9 @@ public class CrystalListener implements Listener {
     }
 
     @EventHandler
-    public void onCrystalSpawn(GenerateCrystalsEvent event) {
+    public void onCrystalSpawn(SpawnCrystalsEvent event) {
         MiniMessage miniMessage = MiniMessage.miniMessage();
-        Player player = event.getPlayer();
+        Player player = event.getOwner();
         if (player == null) {
             return;
         }
@@ -97,23 +98,25 @@ public class CrystalListener implements Listener {
         PlayerData playerData = plugin.getPlayerDataService().getData(player);
         Optional<Integer> currentCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED);
         playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED, amount + currentCrystals.orElse(0));
+        if (event.getOwner() != null) {
         player.sendMessage(miniMessage.deserialize(
                 CrescentHexCodes.ICE_CITADEL + amount + CrescentHexCodes.DROPLET + " crystal(s) have appeared before you. Keep them safe!" ));
-    }
-
-    @EventHandler
-    public void onCrystalIncrement(IncrementCrystalsEvent event) {
-        if (event.getSource() == CrystalSource.COMMAND || event.getSource() == CrystalSource.SALE) {
-            plugin.getStatistics().setCrystalsGenerated(plugin.getStatistics().getCrystalsGenerated() + event.getAmount());
         }
     }
 
     @EventHandler
-    public void onCrystalDecrement(DecrementCrystalsEvent event) {
+    public void onCrystalAdd(AddCrystalsEvent event) {
+        if (event.getSource() == CrystalSource.COMMAND || event.getSource() == CrystalSource.SALE) {
+            plugin.getStatistics().setCrystalsGenerated(plugin.getStatistics().getCrystalsGenerated() + event.getAddedAmount());
+        }
+    }
+
+    @EventHandler
+    public void onCrystalRemove(RemoveCrystalsEvent event) {
         if (event.getSource() == CrystalSource.SALE) {
-            plugin.getStatistics().setCrystalsSpent(plugin.getStatistics().getCrystalsSpent() + event.getAmount());
+            plugin.getStatistics().setCrystalsSpent(plugin.getStatistics().getCrystalsSpent() + event.getRemovedAmount());
         } else {
-            plugin.getStatistics().setCrystalsLost(plugin.getStatistics().getCrystalsLost() + event.getAmount());
+            plugin.getStatistics().setCrystalsLost(plugin.getStatistics().getCrystalsLost() + event.getRemovedAmount());
         }
     }
 

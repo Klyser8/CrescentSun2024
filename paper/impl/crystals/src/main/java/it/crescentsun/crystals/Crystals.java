@@ -2,7 +2,6 @@ package it.crescentsun.crystals;
 
 import it.crescentsun.api.artifacts.ArtifactProvider;
 import it.crescentsun.api.artifacts.ArtifactRegistryService;
-import it.crescentsun.api.artifacts.item.Artifact;
 import it.crescentsun.api.artifacts.item.tooltip.TooltipStyle;
 import it.crescentsun.api.common.ArtifactNamespacedKeys;
 import it.crescentsun.api.common.DatabaseNamespacedKeys;
@@ -16,6 +15,7 @@ import it.crescentsun.api.crystals.CrystalSpawnAnimation;
 import it.crescentsun.api.crystals.CrystalsAPI;
 import it.crescentsun.api.artifacts.item.ArtifactFlag;
 import it.crescentsun.api.crystals.CrystalsService;
+import it.crescentsun.api.crystals.VaultService;
 import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import it.crescentsun.crystals.artifact.CrystalArtifact;
 import it.crescentsun.crystals.data.CrystalsSettings;
@@ -24,6 +24,7 @@ import it.crescentsun.crystals.sound.CrystalsSFX;
 import it.crescentsun.crystals.vault.VaultData;
 import it.crescentsun.crystals.vault.VaultListener;
 import it.crescentsun.crystals.vault.VaultManager;
+import it.crescentsun.crystals.vault.VaultPreventNonCrystalListener;
 import it.crescentsun.triumphcmd.bukkit.BukkitCommandManager;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
@@ -35,8 +36,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static net.kyori.adventure.text.minimessage.MiniMessage.miniMessage;
-
 public final class Crystals extends CrescentPlugin implements CrystalsAPI, ArtifactProvider {
 
     public static final UUID SETTINGS_UUID = UUID.fromString("051ed6ab-ab7a-40e8-ad5c-8d6e7ab8b175");
@@ -45,6 +44,7 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
     private CrystalsStatistics statistics;
     private CrystalsSettings settings;
     private CrystalsService crystalsService;
+    private VaultService vaultService;
     private CrystalsAPI crystalsAPI;
     private CrystalsSFX crystalsSFX;
 
@@ -97,11 +97,14 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
     protected void initServices() {
         super.initServices();
         crystalsService = new CrystalManager(this);
+        vaultService = new VaultManager(this, pluginDataService);
         crystalsAPI = this;
         Bukkit.getPluginManager().registerEvents(new CrystalListener(this), this);
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
-        serviceManager.register(CrystalsService.class, crystalsService, this, ServicePriority.Normal);
+        Bukkit.getPluginManager().registerEvents(new VaultPreventNonCrystalListener(this), this);
         serviceManager.register(CrystalsAPI.class, crystalsAPI, this, ServicePriority.Normal);
+        serviceManager.register(CrystalsService.class, crystalsService, this, ServicePriority.Normal);
+        serviceManager.register(VaultManager.class, vaultManager, this, ServicePriority.Normal);
         try {
             artifactRegistryService = getServiceProvider(ArtifactRegistryService.class);
             crescentCoreAPI = getServiceProvider(CrescentCoreAPI.class);

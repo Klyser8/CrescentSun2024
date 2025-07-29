@@ -12,6 +12,8 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.UUID;
+
 public class VaultInventory implements InventoryHolder {
 
     ///Inventory title, with placeholder for player name and crystal amount
@@ -21,17 +23,19 @@ public class VaultInventory implements InventoryHolder {
     private final Inventory inventory;
     private final Crystals plugin;
     private final Player owner;
+    private final UUID vaultUUID;
 
-    public VaultInventory(Crystals plugin, Player owner) {
+    public VaultInventory(Crystals plugin, Player owner, UUID vaultUUID) {
         this.plugin = plugin;
         this.owner = owner;
+        this.vaultUUID = vaultUUID;
 
         PlayerData ownerData = plugin.getPlayerDataService().getData(owner.getUniqueId());
         int crystalsInVault = (int) ownerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT).orElse(0);
 
         String formatted = String.format(vaultInventoryRawString, owner.getName(), crystalsInVault);
         TextComponent title = (TextComponent) MiniMessage.miniMessage().deserialize(formatted);
-        this.inventory = plugin.getServer().createInventory(owner, 54, title);
+        this.inventory = plugin.getServer().createInventory(this, 54, title);
 
         Artifact crystalArtifact = plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL);
         int slots = inventory.getSize();            // 54
@@ -53,5 +57,9 @@ public class VaultInventory implements InventoryHolder {
 
     public Player getOwner() {
         return owner;
+    }
+
+    public UUID getVaultUUID() {
+        return vaultUUID;
     }
 }

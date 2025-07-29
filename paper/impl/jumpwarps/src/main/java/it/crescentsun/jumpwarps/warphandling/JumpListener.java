@@ -154,7 +154,7 @@ public class JumpListener implements Listener {
         }
         // Check that the player has enough crystals for this action
         PlayerData data = plugin.getPlayerDataService().getData(player.getUniqueId());
-        Optional<Integer> crystalsOptional = data.getDataValue(DatabaseNamespacedKeys.PLAYERS_CRYSTAL_AMOUNT);
+        Optional<Integer> crystalsOptional = data.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
         if (crystalsOptional.isEmpty() || crystalsOptional.get() < 10) {
             player.sendMessage(MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "You do not have enough crystals (10) to create a Jump Warp.", "10", "Jump Warp"));
             item.setItemStack(new ItemStack(Material.WRITABLE_BOOK));

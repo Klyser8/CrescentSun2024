@@ -87,7 +87,6 @@ public class JumpWarpData extends PluginData {
     public boolean tryInit() {
         if (super.tryInit()) {
             this.bukkitTask = new JumpWarpScheduledTask((JumpWarps) owningPlugin, this);
-
             Bukkit.getScheduler().runTaskTimer(owningPlugin, bukkitTask, 0, 2);
         }
         return initialized;

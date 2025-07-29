@@ -1,22 +1,17 @@
 package it.crescentsun.crystals.vault;
 
-import it.crescentsun.api.common.DatabaseNamespacedKeys;
 import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import it.crescentsun.crystals.Crystals;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
-import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class VaultScheduledTask implements Consumer<BukkitTask> {
@@ -28,7 +23,7 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
     private final Interaction interactionEntity;
     private final Matrix4f vaultMatrix;
     private final Matrix4f lanternBaseMatrix;
-    private final Player owner;
+    private final UUID ownerUUID;
     private final VaultData vaultData;
 
     // for dynamic orbit radius
@@ -38,9 +33,9 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
 
     private int tickCounter;
 
-    public VaultScheduledTask(Crystals plugin, Player owner, VaultData vaultData) {
+    public VaultScheduledTask(Crystals plugin, UUID ownerUUID, VaultData vaultData) {
         this.plugin    = plugin;
-        this.owner     = owner;
+        this.ownerUUID = ownerUUID;
         this.vaultData = vaultData;
 
         // BASE MATRIX for the big vault block (half-size & centered)
@@ -54,7 +49,7 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
                 .translate(-0.5f, -0.5f, -0.5f);
 
         // 1) Vault BlockDisplay
-        World world = owner.getWorld();
+        World world = vaultData.getLocation().getWorld();
         Location vaultOrigin = vaultData.getLocation().add(0.5, 2.0, 0.5);
         vaultEntity = world.spawn(
                 vaultOrigin,
@@ -80,7 +75,10 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
                     } else {
                         td.setViewRange(0.05f);
                         td.setVisibleByDefault(false);
-                        owner.showEntity(plugin, td);
+                        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(ownerUUID);
+                        if (offlinePlayer.isOnline()) {
+                            ((Player) offlinePlayer).showEntity(plugin, td);
+                        }
                     }
                 }
         );
@@ -128,7 +126,13 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
 
         // compute player distance horizontally
         Location vaultLoc = vaultData.getLocation().add(0.5, 2.0, 0.5);
-        double distance = owner.getLocation().distance(vaultLoc);
+        OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUUID);
+
+        if (owner.isOnline() && !((Player)owner).canSee(textDisplay)) {
+            ((Player)owner).showEntity(plugin, textDisplay);
+        }
+        //noinspection DataFlowIssue
+        double distance = owner.isOnline() ? owner.getLocation().distance(vaultLoc) : Integer.MAX_VALUE;
 
         // adjust lantern radius and visibility based on distance
         if (distance <= 5) {

@@ -21,10 +21,7 @@ import it.crescentsun.crystals.artifact.CrystalArtifact;
 import it.crescentsun.crystals.data.CrystalsSettings;
 import it.crescentsun.crystals.data.CrystalsStatistics;
 import it.crescentsun.crystals.sound.CrystalsSFX;
-import it.crescentsun.crystals.vault.VaultData;
-import it.crescentsun.crystals.vault.VaultListener;
-import it.crescentsun.crystals.vault.VaultManager;
-import it.crescentsun.crystals.vault.VaultPreventNonCrystalListener;
+import it.crescentsun.crystals.vault.*;
 import it.crescentsun.triumphcmd.bukkit.BukkitCommandManager;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
@@ -59,6 +56,7 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
         vaultManager = new VaultManager(this, pluginDataService);
         BukkitCommandManager<CommandSender> commandManager = BukkitCommandManager.create(this);
         commandManager.registerCommand(new CrystalsCommands(this));
+        commandManager.registerCommand(new VaultCommands(this));
 
         commandManager.registerArgument(CrystalSpawnAnimation.class, (commandSender, argument) -> {
             try {
@@ -176,5 +174,14 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
 
     public VaultManager getVaultManager() {
         return vaultManager;
+    }
+
+    @Override
+    public void onDisable() {
+        if (vaultManager != null) {
+            for (VaultData data : vaultManager.getAllData(true)) {
+                data.stopTask();
+            }
+        }
     }
 }

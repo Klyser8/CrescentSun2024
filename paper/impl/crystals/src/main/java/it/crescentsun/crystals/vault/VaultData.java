@@ -9,9 +9,11 @@ import it.crescentsun.api.crescentcore.data.plugin.PluginDataIdentifier;
 import it.crescentsun.api.crystals.VaultService;
 import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import it.crescentsun.crystals.Crystals;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -89,16 +91,36 @@ public class VaultData extends PluginData {
     @Override
     public boolean tryInit() {
         if (super.tryInit()) {
-            this.bukkitTask = new VaultScheduledTask((Crystals) owningPlugin, ownerUuid, this);
-            Bukkit.getScheduler().runTaskTimer(owningPlugin, bukkitTask, 0, 1);
-            refreshVaultNameTag();
+            if (isPublic() || Bukkit.getPlayer(ownerUuid) != null) {
+                startTask();
+            }
         }
         return initialized;
     }
 
+    public void startTask() {
+        if (bukkitTask != null) {
+            return;
+        }
+        // Schedule on the main thread to avoid AsyncCatcher exceptions
+        Bukkit.getScheduler().runTask(owningPlugin, () -> {
+            bukkitTask = new VaultScheduledTask((Crystals) owningPlugin, ownerUuid, this);
+            bukkitTask.runTaskTimer(owningPlugin, 0, 1);
+            refreshVaultNameTag();
+        });
+    }
+
+    public void stopTask() {
+        if (bukkitTask != null) {
+            bukkitTask.cleanup();
+            bukkitTask.cancel();
+            bukkitTask = null;
+        }
+    }
+
     @Override
     public boolean isProxyDependent() {
-        return false;
+        return true; // Proxy dependent as vaults need to know the server's name
     }
 
     public Location getLocation() {
@@ -110,13 +132,22 @@ public class VaultData extends PluginData {
     }
 
     public void refreshVaultNameTag() {
-        Optional<Integer> inVault = owningPlugin.getPlayerDataService()
-                .getData(ownerUuid)
-                .getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
-        bukkitTask.textDisplay.text(MiniMessage.miniMessage().deserialize(
-                CrescentHexCodes.ICE_CITADEL + Bukkit.getOfflinePlayer(ownerUuid).getName() + "'s Crystal Vault" +
-                        CrescentHexCodes.WHITE + " - " +
-                        CrescentHexCodes.DROPLET + inVault.orElse(0)));
+        if (bukkitTask == null) {
+            return;
+        }
+        Component textDisplayValue;
+        if (isPublic) {
+            textDisplayValue = MiniMessage.miniMessage().deserialize(CrescentHexCodes.YELLOW + "Public Crystal Vault");
+        } else {
+            Optional<Integer> inVault = owningPlugin.getPlayerDataService()
+                    .getData(ownerUuid)
+                    .getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
+            textDisplayValue = MiniMessage.miniMessage().deserialize(
+                    CrescentHexCodes.ICE_CITADEL + Bukkit.getOfflinePlayer(ownerUuid).getName() + "'s Crystal Vault" +
+                            CrescentHexCodes.WHITE + " - " +
+                            CrescentHexCodes.DROPLET + inVault.orElse(0));
+        }
+        bukkitTask.textDisplay.text(textDisplayValue);
     }
 
     public void setUuid(UUID uuid) {
@@ -186,10 +217,7 @@ public class VaultData extends PluginData {
     @Override
     public <T extends PluginData> CompletableFuture<PluginDataIdentifier<T>> deleteAndSync() {
         CompletableFuture<PluginDataIdentifier<T>> pluginDataIdentifierCompletableFuture = super.deleteAndSync();
-        // Cancel the scheduled task if it exists
-        if (bukkitTask != null) {
-
-        }
+        pluginDataIdentifierCompletableFuture.thenAccept(pluginDataIdentifier -> stopTask());
         return pluginDataIdentifierCompletableFuture;
     }
 

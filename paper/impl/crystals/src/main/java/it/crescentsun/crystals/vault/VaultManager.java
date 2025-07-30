@@ -1,6 +1,8 @@
 package it.crescentsun.crystals.vault;
 
 import it.crescentsun.api.crescentcore.data.plugin.AbstractPluginDataManager;
+import it.crescentsun.api.crescentcore.data.plugin.PluginData;
+import it.crescentsun.api.crescentcore.data.plugin.PluginDataIdentifier;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataService;
 import it.crescentsun.api.crescentcore.util.VectorUtils;
 import it.crescentsun.api.crystals.VaultService;
@@ -13,8 +15,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3i;
 
-import java.util.Comparator;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData> implements VaultService {
 
@@ -22,12 +24,13 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
         super(plugin, VaultData.class, pluginDataService);
     }
 
-    public static Vector3i[] diamondBlockOffsets = new Vector3i[]{
-            new Vector3i(1, 0, 0),
-            new Vector3i(-1, 0, 0),
-            new Vector3i(0, 0, 1),
-            new Vector3i(0, 0, -1),
-    };
+    public static Map<Vector3i, Material> vaultBlockOffsets = Map.of(
+            new Vector3i(0, 0, 0), Material.LODESTONE,
+            new Vector3i(1, 0, 0), Material.DIAMOND_BLOCK,
+            new Vector3i(-1, 0, 0), Material.DIAMOND_BLOCK,
+            new Vector3i(0, 0, 1), Material.DIAMOND_BLOCK,
+            new Vector3i(0, 0, -1),  Material.DIAMOND_BLOCK
+            );
 
     public VaultData createVault(Player owner, Location location, boolean isPublic) {
         if (owner == null || location == null) {
@@ -50,6 +53,63 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
         vaultData.tryInit();
         vaultData.saveAndSync();
         return vaultData;
+    }
+
+    /**
+     * Deletes the vault at the specified location, if it exists.
+     *
+     * @param location The location of the vault to delete.
+     * @return The VaultData object that was deleted, or null if no vault was found at the location.
+     */
+    public VaultData deleteVault(@NotNull Location location) {
+        VaultData vaultData = getVaultAtLocation(location);
+        if (vaultData == null) {
+            return null;
+        }
+        CompletableFuture<PluginDataIdentifier<PluginData>> future = vaultData.deleteAndSync();
+        future.join(); // Wait for the deletion to complete
+        return vaultData;
+    }
+
+    /**
+     * Deletes the vault with the specified UUID, if it exists.
+     *
+     * @param vaultUUID The UUID of the vault to delete.
+     * @return The VaultData object that was deleted, or null if no vault was found with the given UUID.
+     */
+    public VaultData deleteVault(@NotNull UUID vaultUUID) {
+        VaultData vaultData = getDataInstance(vaultUUID);
+        if (vaultData == null) {
+            return null;
+        }
+        CompletableFuture<PluginDataIdentifier<PluginData>> future = vaultData.deleteAndSync();
+        future.join(); // Wait for the deletion to complete
+        return vaultData;
+    }
+
+    /**
+     * Deletes all vaults owned by the specified owner UUID.
+     *
+     * @param ownerUUID The UUID of the owner whose vaults should be deleted.
+     * @return An array of VaultData objects that were deleted or an empty array if no vaults were found.
+     */
+    public VaultData[] deleteVaultsOwnedBy(@NotNull UUID ownerUUID) {
+        UUID[] vaultIds = getVaultsByOwner(ownerUUID);
+        if (vaultIds.length == 0) {
+            return new VaultData[0];
+        }
+        VaultData[] vaults = Arrays.stream(vaultIds)
+                .map(this::getDataInstance)
+                .filter(Objects::nonNull)
+                .toArray(VaultData[]::new);
+
+        List<CompletableFuture<PluginDataIdentifier<PluginData>>> futures = Arrays.stream(vaults)
+                .map(VaultData::deleteAndSync)
+                .toList();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join(); // wait once
+
+        return vaults;
     }
 
     /**
@@ -103,17 +163,14 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
      * @return Whether the structure is valid or not.
      */
     public static boolean isVaultStructureValid(@NotNull Location location) {
-        //Check whether the block at the current location is of type gold pressure plate
-        if (!location.getBlock().getType().equals(Material.LODESTONE)) {
-            return false;
-        }
-        // Check that there are gold blocks at offsets matching the grid above
-        for (Vector3i offset : diamondBlockOffsets) {
-            Location loc = location.clone().offset(offset.x, offset.y, offset.z).toLocation(location.getWorld());
-            if (!loc.getBlock().getType().equals(Material.DIAMOND_BLOCK)) {
-                return false;
+        for (Map.Entry<Vector3i, Material> entry : vaultBlockOffsets.entrySet()) {
+            Vector3i offset = entry.getKey();
+            Material expectedMaterial = entry.getValue();
+            Location blockLocation = location.clone().add(offset.x, offset.y, offset.z);
+            if (blockLocation.getBlock().getType() != expectedMaterial) {
+                return false; // If any block does not match the expected material, return false
             }
-        }
+        }//
         return true;
     }
 

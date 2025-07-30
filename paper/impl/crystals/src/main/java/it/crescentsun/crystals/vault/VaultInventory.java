@@ -17,8 +17,7 @@ import java.util.UUID;
 public class VaultInventory implements InventoryHolder {
 
     ///Inventory title, with placeholder for player name and crystal amount
-    private final String vaultInventoryRawString ="<gradient:#FFCCF3:#F1A1FF:#D07FFF:#BD5CFF:#A734FF>%s's Vault</gradient> - " +
-            "<#00BFFF>(%d)</#00BFFF>";
+    private final String vaultInventoryRawString ="<#6e6e6e>%s's Vault - <#ffffff>%d";
 
     private final Inventory inventory;
     private final Crystals plugin;
@@ -33,7 +32,7 @@ public class VaultInventory implements InventoryHolder {
         PlayerData ownerData = plugin.getPlayerDataService().getData(owner.getUniqueId());
         int crystalsInVault = (int) ownerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT).orElse(0);
 
-        String formatted = String.format(vaultInventoryRawString, owner.getName(), crystalsInVault);
+        String formatted = String.format(vaultInventoryRawString, owner.getName(), crystalsInVault);//
         TextComponent title = (TextComponent) MiniMessage.miniMessage().deserialize(formatted);
         this.inventory = plugin.getServer().createInventory(this, 54, title);
 

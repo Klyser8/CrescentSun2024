@@ -7,29 +7,28 @@ import it.crescentsun.api.common.DatabaseNamespacedKeys;
 import it.crescentsun.api.crescentcore.data.player.PlayerData;
 import it.crescentsun.api.crescentcore.data.plugin.PluginData;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataIdentifier;
+import it.crescentsun.api.crescentcore.event.player.PlayerDataSavedPostQuitEvent;
+import it.crescentsun.api.crescentcore.event.player.PlayerJoinEventPostDBLoad;
 import it.crescentsun.api.crystals.CrystalSource;
 import it.crescentsun.api.crystals.event.AddCrystalsEvent;
-import it.crescentsun.api.crystals.event.CreateVaultEvent;
 import it.crescentsun.api.crystals.event.DestroyVaultEvent;
 import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import it.crescentsun.crystals.Crystals;
-import it.crescentsun.crystals.artifact.CrystalArtifact;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.entity.EntityEnterBlockEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
+import org.bukkit.event.block.BlockPistonRetractEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -55,12 +54,14 @@ public class VaultListener implements Listener {
         }
 
         new BukkitRunnable() {
+            private int tickCount = 0;
+
             @Override
             public void run() {
                 if (!itemDrop.isValid()) {
                     cancel();
                 }
-                boolean vaultStructureValid = VaultManager.isVaultStructureValid(itemDrop.getLocation().add(0, -0.5, 0));
+                boolean vaultStructureValid = VaultManager.isVaultStructureValid(itemDrop.getLocation().add(0, -0.5 - tickCount / 5.0, 0));
                 if (!vaultStructureValid) {
                     return;
                 }
@@ -71,35 +72,68 @@ public class VaultListener implements Listener {
                     owner.sendMessage(MiniMessage.miniMessage().deserialize(
                             CrescentHexCodes.RED + "A Crystal Vault is already present near this location!"
                     ));
+                    cancel();
                     return;
                 }
-                Location lodestoneLocation = itemDrop.getLocation().add(0, -1, 0);
-                plugin.getVaultManager().createVault(owner, lodestoneLocation, false);
-                MiniMessage miniMessage = MiniMessage.miniMessage();
-                owner.sendMessage(miniMessage.deserialize(
-                        CrescentHexCodes.FUCHSIA + " You've created a new Crystal Vault, at " +
-                                CrescentHexCodes.YELLOW + "X: " + lodestoneLocation.getBlockX() +
-                                ", Y: " + lodestoneLocation.getBlockY() +
-                                ", Z: " + lodestoneLocation.getBlockZ() +
-                                CrescentHexCodes.FUCHSIA + "! Right-click on it to deposit or withdraw your crystals."
-                ));
-                itemDrop.remove();
-                cancel();
+                World world = itemDrop.getWorld();
+                Location centre = itemDrop.getLocation()
+                        .getBlock()
+                        .getLocation()
+                        .add(0.5, 0.5, 0.5);
+                if (tickCount == 0) {
+                    itemDrop.teleport(centre);
+                    centre = centre.clone().add(0, 1, 0); //
+                    itemDrop.setGravity(false);
+                    itemDrop.setInvulnerable(true);
+                    world.spawnParticle(Particle.OMINOUS_SPAWNING, centre, 250, 0, 0, 0, 10);
+                    world.spawnParticle(Particle.END_ROD, itemDrop.getLocation().add(0, 0.3, 0), 15, 0.05, 0.05, 0.05, 0.01);
+                    itemDrop.setVelocity(new Vector(0, 0.033f, 0));
+                }
+                if (tickCount == 2) {
+                    plugin.getCrystalsSFX().vaultCreate.playAtLocation(centre);
+                } else if (tickCount == 4) {
+                    centre = centre.clone().add(0, 1, 0);
+                    world.spawnParticle(Particle.FISHING, centre, 100, 0, 0, 0, 0.05);
+                    world.spawnParticle(Particle.FIREWORK, centre, 25, 0.25, 0.25, 0.25, 0.2);
+                    world.spawnParticle(Particle.FLASH, centre, 1);
+                    Location lodestoneLocation = itemDrop.getLocation().add(0, -1, 0);
+                    VaultData playerVault = plugin.getVaultManager().createVault(owner, lodestoneLocation, false);
+                    itemDrop.getItemStack().setAmount(itemDrop.getItemStack().getAmount() - 1);
+                    int crystalsInVault = (int) plugin.getPlayerDataService().getData(owner).getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT).orElse(0);
+                    plugin.getPlayerDataService().getData(owner).updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT, crystalsInVault + itemDrop.getItemStack().getAmount());
+                    itemDrop.remove();
+                    playerVault.refreshVaultNameTag();
+                    String raw = "\n"
+                            + "<#15ffcc>----------------------</#15ffcc>"
+                            + "<#52d1ff> CRYSTALS </#52d1ff>"
+                            + "<#15ffcc>----------------------</#15ffcc>\n"
+                            + "<#88f5ff>You made a new <b>Crystal Vault</b> at <white>%d</white>, <white>%d</white>, <white>%d</white>.</#88f5ff>\n"
+                            + "<#52d1ff>- Right-click to open, and deposit/withdraw Crystals.</#52d1ff>\n"
+                            + "<#88f5ff>- The Crystal Vault is yours only, with its contents being accessible throughout the whole network.</#88f5ff>\n"
+                            + "<#52d1ff>- Right-click while holding a Crystal to deposit it in the vault.</#52d1ff>\n"
+                            + "<#15ffcc>-----------------------------------------------------</#15ffcc>";
+
+                    String formatted = String.format(raw, playerVault.getX(), playerVault.getY(), playerVault.getZ());
+                    owner.sendMessage(MiniMessage.miniMessage().deserialize(formatted));
+                    cancel();
+                }
+                tickCount++;
+
             }
-        }.runTaskTimer(plugin, 0, 5);
+        }.runTaskTimer(plugin, 0, 6);
     }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        Location loc = event.getBlock().getLocation();
+        Location breakLoc = event.getBlock().getLocation();
         if (event.getBlock().getType() != Material.DIAMOND_BLOCK && event.getBlock().getType() != Material.LODESTONE) {
             return;
         }
-        VaultData closestVault = plugin.getVaultManager().getClosestVault(loc);
+        VaultData closestVault = plugin.getVaultManager().getClosestVault(breakLoc);
         if (closestVault == null) {
             return;
         }
-        double distanceFromClosestVault = closestVault.getLocation().distanceSquared(loc);
+        double distanceFromClosestVault = closestVault.getLocation().distanceSquared(breakLoc);
 
         Player player = event.getPlayer();
         if (distanceFromClosestVault <= 1) {
@@ -109,20 +143,16 @@ public class VaultListener implements Listener {
                 if (vaultEvent.isCancelled()) {
                     return;
                 }
-                CompletableFuture<PluginDataIdentifier<PluginData>> completableFuture = closestVault.deleteAndSync();
-                completableFuture.thenAccept(pluginDataIdentifier -> {
-                    player.sendMessage(MiniMessage.miniMessage().deserialize(
-                            CrescentHexCodes.YELLOW + "You have successfully destroyed your Crystal Vault at " +
-                                    CrescentHexCodes.FUCHSIA + "X: " + closestVault.getLocation().getBlockX() +
-                                    ", Y: " + closestVault.getLocation().getBlockY() +
-                                    ", Z: " + closestVault.getLocation().getBlockZ() + "!"
-                    ));
-                    if (vaultEvent.shouldDropCrystal()) {
-                        plugin.getCrystalsService().dropCrystals(player, closestVault.getLocation(), 1,
-                                CrystalSource.BLOCK_DROP);
-                    }
-                });
+                VaultData vault = plugin.getVaultManager().deleteVault(closestVault.getUuid());
+                plugin.getCrystalsSFX().vaultBreak.playAtLocation(breakLoc);
+                String raw = ""
+                        + CrescentHexCodes.RED + "You have destroyed the Crystal Vault found at <yellow>%d<white>, <yellow>%d<white>, <yellow>%d<white>.";
 
+                String formatted = String.format(raw, vault.getX(), vault.getY(), vault.getZ());
+                player.sendMessage(MiniMessage.miniMessage().deserialize(formatted));
+                if (vaultEvent.shouldDropCrystal()) {
+                    plugin.getCrystalsService().dropCrystals(player, vault.getLocation().add(0, 2, 0), 1, CrystalSource.BLOCK_DROP);
+                }
             } else {
                 event.setCancelled(true);
                 player.sendMessage(MiniMessage.miniMessage().deserialize(
@@ -130,6 +160,34 @@ public class VaultListener implements Listener {
                 ));
             }
         }
+    }
+
+    @EventHandler
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (isLocationPartOfVault(b.getLocation())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        // only sticky pistons can pull blocks
+        if (!event.isSticky()) return;
+        for (Block b : event.getBlocks()) { //
+            if (isLocationPartOfVault(b.getLocation())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEntityExplode(EntityExplodeEvent event) {
+        // prevent vault blocks from being destroyed
+        event.blockList().removeIf(b -> isLocationPartOfVault(b.getLocation()));
     }
 
     @EventHandler
@@ -157,7 +215,7 @@ public class VaultListener implements Listener {
                     CrescentHexCodes.RED + "You cannot access this vault, as you are not its owner."
             ));
             return;
-        } //TODO: 1. Fix inventory clicks 2. Avoid multiple vaults being placed in the same spot 3. Allow to destroy vaults
+        }
 
         ItemStack itemUsed = player.getInventory().getItemInMainHand();
         Artifact artifact = ArtifactUtil.identifyArtifact(itemUsed);
@@ -194,6 +252,7 @@ public class VaultListener implements Listener {
             // Open vault inventory
             VaultInventory vaultInventory = new VaultInventory(plugin, player, vaultData.getUuid());
             player.openInventory(vaultInventory.getInventory());
+            plugin.getCrystalsSFX().vaultOpen.playForPlayerAtLocation(player);
         }
     }
 
@@ -218,5 +277,45 @@ public class VaultListener implements Listener {
         plugin.getPlayerDataService().getData(owner).updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT, crystalCount);
         VaultData vaultData = plugin.getVaultManager().getDataInstance(vaultInventory.getVaultUUID());
         vaultData.refreshVaultNameTag();
+        plugin.getCrystalsSFX().vaultClose.playForPlayerAtLocation(owner);
+    }
+
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEventPostDBLoad event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        for (UUID vaultId : plugin.getVaultManager().getVaultsByOwner(uuid)) {
+            VaultData data = plugin.getVaultManager().getDataInstance(vaultId);
+            if (data != null && !data.isPublic()) {
+                data.startTask();
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerDataSavedPostQuitEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        for (UUID vaultId : plugin.getVaultManager().getVaultsByOwner(uuid)) {
+            VaultData data = plugin.getVaultManager().getDataInstance(vaultId);
+            if (data != null && !data.isPublic()) {
+                data.stopTask();
+            }
+        }
+    }
+
+    /**
+     * Returns true if the block at this location is either
+     *  • a diamond block
+     *  • a lodestone
+     *  • and is within distanceSquared ≤ 1 of the closest vault.
+     */
+    private boolean isLocationPartOfVault(Location loc) {
+        Material type = loc.getBlock().getType();
+        boolean vaultBlock = false;
+        if (type == Material.DIAMOND_BLOCK || type == Material.LODESTONE) {
+            vaultBlock = true;
+        }
+        VaultData closest = plugin.getVaultManager().getClosestVault(loc);
+        return vaultBlock && closest != null && closest.getLocation().distanceSquared(loc) <= 1.0;
     }
 }

@@ -114,6 +114,8 @@ public abstract class PluginData {
 
     /**
      * Some Plugin Data implementations may require a connection to the proxy before being initialized.
+     * For example, if a Plugin Data class requires fetching the name of the server it is currently on, that requires a proxy connection.
+     *
      * To ensure correct initialization, it's important for the implementation to override this method and return true if the data instance is dependent on a proxy connection.<br>
      * If it is, the data instance will be initialized after a connection to the proxy has been established.<br>
      * If it isn't, the data instance will be initialized right after all data's been cached from the database.

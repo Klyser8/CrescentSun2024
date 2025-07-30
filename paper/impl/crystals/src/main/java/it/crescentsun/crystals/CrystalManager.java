@@ -10,6 +10,7 @@ import it.crescentsun.api.crystals.CrystalSource;
 import it.crescentsun.api.crystals.CrystalSpawnAnimation;
 import it.crescentsun.api.crystals.CrystalsService;
 import it.crescentsun.api.crystals.event.SpawnCrystalsEvent;
+import it.crescentsun.crystals.artifact.CrystalArtifact;
 import org.bukkit.*;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -42,12 +43,10 @@ public class CrystalManager implements CrystalsService {
             return;
         }
         int finalAmount = Math.min(event.getAmount(), 99);
-        ItemStack crystalStack = plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL).createStack(finalAmount);
-        ArtifactUtil.addFlagsToStack(crystalStack, ArtifactFlag.HIDE_DROP_NAME);
         if (spawnAnimation == CrystalSpawnAnimation.CIRCLING_EXPLOSION) {
-            circlingExplosion(player, amount, crystalStack, source, player.getLocation().clone().add(0, 3, 0));
+            circlingExplosion(player, finalAmount, source, player.getLocation().clone().add(0, 3, 0));
         } else if (spawnAnimation == CrystalSpawnAnimation.HOVER) {
-            hover(player, crystalStack, source, spawnLocation);
+            hover(player, source, spawnLocation);
         }
     }
 
@@ -109,11 +108,14 @@ public class CrystalManager implements CrystalsService {
         playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT, amount);
     }
 
-    private void hover(@Nullable Player player, ItemStack crystalStack, CrystalSource source, Location spawnLocation) {
+    private void hover(@Nullable Player player, CrystalSource source, Location spawnLocation) {
+        CrystalArtifact crystalArtifact = (CrystalArtifact) plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL);
+        ItemStack blueprintCrystal = crystalArtifact.createStack(1);
+        ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.HIDE_DROP_NAME);
         AtomicInteger movementTicks = new AtomicInteger();
         AtomicReference<Location> previousTargetLoc = new AtomicReference<>(player != null ? player.getLocation() : spawnLocation);
         // item entity should stay in place for about two seconds, then move 50% of the way between it and the player who won it.
-        Item crystal = spawnLocation.getWorld().dropItem(spawnLocation, crystalStack);
+        Item crystal = spawnLocation.getWorld().dropItem(spawnLocation, blueprintCrystal);
         crystal.setGravity(false);
         crystal.setVelocity(new Vector(0, 0, 0));
         crystal.setCanPlayerPickup(false);
@@ -169,7 +171,7 @@ public class CrystalManager implements CrystalsService {
                 }
             }
             if (ticksLived == 60) {
-                SpawnCrystalsEvent incrementEvent = new SpawnCrystalsEvent(player, crystalStack.getAmount(), crystal.getLocation(), source);
+                SpawnCrystalsEvent incrementEvent = new SpawnCrystalsEvent(player, blueprintCrystal.getAmount(), crystal.getLocation(), source);
                 incrementEvent.callEvent();
                 if (incrementEvent.isCancelled()) {
                     crystal.remove();
@@ -193,7 +195,10 @@ public class CrystalManager implements CrystalsService {
         }, 0, 1);
     }
 
-    private void circlingExplosion(@Nullable Player player, int amount, ItemStack crystalStack, CrystalSource source, Location endLocation) {
+    private void circlingExplosion(@Nullable Player player, int amount, CrystalSource source, Location endLocation) {
+        CrystalArtifact crystalArtifact = (CrystalArtifact) plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL);
+        ItemStack blueprintCrystal = crystalArtifact.createStack(1);
+        ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.HIDE_DROP_NAME);
         List<Item> crystals = new ArrayList<>();
         World world = endLocation.getWorld();
         double angleStep = (2 * Math.PI) / amount;
@@ -209,8 +214,7 @@ public class CrystalManager implements CrystalsService {
         Bukkit.getScheduler().runTask(plugin, () -> {
             // Initial spawn
             for (int i = 0; i < amount; i++) {
-                ItemStack single = crystalStack.clone();
-                single.setAmount(1);
+                ItemStack single = blueprintCrystal.clone();
                 double angle = angleStep * i;
                 Location spawnLoc = centerLocation.clone().add(
                         Math.cos(angle) * radius,
@@ -260,20 +264,20 @@ public class CrystalManager implements CrystalsService {
                         if (isFinite(rand)) crystal.setVelocity(rand);
                         plugin.getCrystalsSFX().circlingExplosion.playAtLocation(endLocation);
                         ArtifactUtil.removeFlagsFromItem(crystal, ArtifactFlag.HIDE_DROP_NAME);
-                        done = true;
-                    } else {
                         if (player != null) {
                             crystal.setThrower(player.getUniqueId());
-                            crystal.setCanPlayerPickup(true);
-                            crystal.setPickupDelay(20);
                         }
+                        crystal.setCanPlayerPickup(true);
+                        crystal.setPickupDelay(20);
+                        crystal.setTicksLived(0);
+                        done = true;
                     }
                 }
 
                 if (done) {
-                    SpawnCrystalsEvent incrementEvent = new SpawnCrystalsEvent(player, amount, endLocation, source);
-                    incrementEvent.callEvent();
-                    if (incrementEvent.isCancelled()) {
+                    SpawnCrystalsEvent spawnCrystalsEvent = new SpawnCrystalsEvent(player, amount, endLocation, source);
+                    spawnCrystalsEvent.callEvent();
+                    if (spawnCrystalsEvent.isCancelled()) {
                         crystals.forEach(Item::remove);
                     }
                     task.cancel();

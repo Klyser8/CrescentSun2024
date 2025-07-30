@@ -51,13 +51,23 @@ public class CrystalArtifact extends Artifact {
     public boolean onPickup(PlayerAttemptPickupItemEvent event) {
         Player player = event.getPlayer();
         Item itemDrop = event.getItem();
-        if (!player.getUniqueId().equals(itemDrop.getThrower())) {
-            if (itemDrop.getTicksLived() < crystalsPlugin.getSettings().getNonOwnedCrystalPickupDelay()) {
-                event.setCancelled(true);
-                return false;
-            }
+        boolean canPickup = false;
+        if (itemDrop.getThrower() == null) {
+            canPickup = true;
         }
-        return true;
+        if (player.getUniqueId().equals(itemDrop.getThrower())) {
+            canPickup = true;
+        }
+        if (itemDrop.getTicksLived() >= crystalsPlugin.getSettings().getNonOwnedCrystalPickupDelay() / 2) {
+            canPickup = true;
+        }
+        if (canPickup) {
+            crystalsPlugin.getCrystalsSFX().crystalPickUp.playForPlayerAtLocation(event.getPlayer());
+            return true;
+        } else {
+            event.setCancelled(true);
+            return false;
+        }
     }
 
     @Override
@@ -67,19 +77,20 @@ public class CrystalArtifact extends Artifact {
         new BukkitRunnable() {
             @Override
             public void run() {
-                item.setTicksLived(Math.max(1, item.getTicksLived() - 3)); // Should make the item last 15000 ticks (12.5 minutes) instead of 6000 ticks (5 minutes)
+                if (!item.isValid()) {
+                    // Cancel task
+                    cancel();
+                }
+                // Lifetime needs to go from 5 minutes to 10 minutes
+                item.setTicksLived(Math.max(1, item.getTicksLived() - 3));
                 if (plugin.random().nextInt(4) == 0) {
                     item.getWorld().spawnParticle(Particle.WAX_OFF, item.getLocation().add(0.25, 0.25, 0.25), 1, 0.25, 0.25, 0.25, 1.0);
                 }
                 if (plugin.random().nextInt(8) == 0) {
                     crystalsPlugin.getCrystalsSFX().crystalHover.playAtLocation(item.getLocation());
                 }
-                if (item.isDead()) {
-                    // Cancel task
-                    cancel();
-                }
             }
-        }.runTaskTimer(crystalsPlugin, 5, 5);
+        }.runTaskTimer(crystalsPlugin, 6, 6);
         return true;
     }
 }

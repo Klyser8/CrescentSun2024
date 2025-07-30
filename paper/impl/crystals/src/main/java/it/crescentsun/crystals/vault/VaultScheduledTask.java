@@ -6,6 +6,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.joml.Matrix4f;
@@ -14,7 +15,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public class VaultScheduledTask implements Consumer<BukkitTask> {
+public class VaultScheduledTask extends BukkitRunnable {
 
     private final Crystals plugin;
     private final BlockDisplay vaultEntity;
@@ -107,35 +108,54 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
         });
     }
 
+    public void cleanup() {
+        vaultEntity.remove();
+        textDisplay.remove();
+        for (BlockDisplay ld : lanterns) {
+            ld.remove();
+        }
+        interactionEntity.remove();
+    }
+
     @Override
-    public void accept(BukkitTask task) {
+    public void run() {
         tickCounter++;
 
         // cleanup if invalid
         if (!vaultEntity.isValid() || !textDisplay.isValid()
                 || !lanterns[0].isValid() || !lanterns[1].isValid() || !interactionEntity.isValid() ||
                 plugin.getVaultManager().getDataInstance(vaultData.getUuid()) == null) {
-            task.cancel();
-            vaultEntity.remove();
-            textDisplay.remove();
-            lanterns[0].remove();
-            lanterns[1].remove();
-            interactionEntity.remove();
+            cancel();
+            cleanup();
             return;
         }
 
         // compute player distance horizontally
         Location vaultLoc = vaultData.getLocation().add(0.5, 2.0, 0.5);
-        OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUUID);
+        double distance = Double.MAX_VALUE;
+        boolean shouldAnimate;
 
-        if (owner.isOnline() && !((Player)owner).canSee(textDisplay)) {
-            ((Player)owner).showEntity(plugin, textDisplay);
+        if (vaultData.isPublic()) {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                double d = p.getLocation().distance(vaultLoc);
+                if (d < distance) {
+                    distance = d;
+                }
+            }
+            shouldAnimate = distance <= 20;
+        } else {
+            Player owner = Bukkit.getPlayer(ownerUUID);
+            if (owner != null) {
+                if (!owner.canSee(textDisplay)) {
+                    owner.showEntity(plugin, textDisplay);
+                }
+                distance = owner.getLocation().distance(vaultLoc);
+            }
+            shouldAnimate = distance <= 5;
         }
-        //noinspection DataFlowIssue
-        double distance = owner.isOnline() ? owner.getLocation().distance(vaultLoc) : Integer.MAX_VALUE;
 
-        // adjust lantern radius and visibility based on distance
-        if (distance <= 5) {
+        // adjust lantern radius and visibility based on animation state
+        if (shouldAnimate) {
             // player is close: ramp up towards target
             currentLanternRadius = Math.min(TARGET_LANTERN_RADIUS,
                     currentLanternRadius + RADIUS_STEP);
@@ -155,9 +175,8 @@ public class VaultScheduledTask implements Consumer<BukkitTask> {
             }
         }
 
-        // common bob value
-        float prog    = tickCounter / 40f;
-        float yOffset = 0.1f * (float)Math.sin(prog * Math.PI);
+        float prog    = shouldAnimate ? tickCounter / 40f : 0f;
+        float yOffset = shouldAnimate ? 0.1f * (float)Math.sin(prog * Math.PI) : 0f;
 
         // — vault bob & spin —
         vaultEntity.setInterpolationDelay(0);

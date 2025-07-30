@@ -13,16 +13,22 @@ import it.crescentsun.api.crystals.event.AddCrystalsEvent;
 import it.crescentsun.api.crystals.event.RemoveCrystalsEvent;
 import it.crescentsun.api.crystals.event.SpawnCrystalsEvent;
 import it.crescentsun.crescentmsg.api.CrescentHexCodes;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.advancement.Advancement;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityRemoveEvent;
+import org.bukkit.event.entity.ItemDespawnEvent;
 import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.awt.event.ItemEvent;
 import java.util.*;
 
 public class CrystalListener implements Listener {
@@ -98,9 +104,12 @@ public class CrystalListener implements Listener {
         PlayerData playerData = plugin.getPlayerDataService().getData(player);
         Optional<Integer> currentCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED);
         playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_SPAWNED, amount + currentCrystals.orElse(0));
+        plugin.getStatistics().setCrystalsGenerated(plugin.getStatistics().getCrystalsGenerated() + amount);
         if (event.getOwner() != null) {
-        player.sendMessage(miniMessage.deserialize(
-                CrescentHexCodes.ICE_CITADEL + amount + CrescentHexCodes.DROPLET + " crystal(s) have appeared before you. Keep them safe!" ));
+            Component pluralMessage = miniMessage.deserialize(
+                    CrescentHexCodes.ICE_CITADEL + amount + CrescentHexCodes.DROPLET + " Crystals have appeared before you.");
+            Component singularMessage = miniMessage.deserialize(CrescentHexCodes.DROPLET + "A Crystal has appeared before you.");
+            player.sendActionBar(amount > 1 ? pluralMessage : singularMessage);
         }
     }
 
@@ -115,20 +124,25 @@ public class CrystalListener implements Listener {
     public void onCrystalRemove(RemoveCrystalsEvent event) {
         if (event.getSource() == CrystalSource.SALE) {
             plugin.getStatistics().setCrystalsSpent(plugin.getStatistics().getCrystalsSpent() + event.getRemovedAmount());
-        } else {
-            plugin.getStatistics().setCrystalsLost(plugin.getStatistics().getCrystalsLost() + event.getRemovedAmount());
         }
     }
 
     @EventHandler
-    public void onCrystalPickup(PlayerAttemptPickupItemEvent event) {
-        ItemStack item = event.getItem().getItemStack();
-        Artifact artifact = ArtifactUtil.identifyArtifact(item);
-        if (artifact == null) {
+    public void onItemRemove(EntityRemoveEvent event) {
+        if (!(event.getEntity() instanceof Item itemDrop)) {
             return;
         }
-        if (artifact.namespacedKey().equals(ArtifactNamespacedKeys.CRYSTAL)) {
-            plugin.getCrystalsSFX().crystalPickUp.playForPlayerAtLocation(event.getPlayer());
+        Artifact crystalArtifact = ArtifactUtil.identifyArtifact(itemDrop.getItemStack());
+        if (crystalArtifact == null) {
+            return;
+        }
+        // We only want to handle the removal of crystals, not the pickup of them
+        if (event.getCause() == EntityRemoveEvent.Cause.PICKUP) {
+            return;
+        }
+        if (crystalArtifact.namespacedKey().equals(ArtifactNamespacedKeys.CRYSTAL)) {
+            // This is a crystal item drop, we need to update the statistics in regard to the amount of crystals being lost.
+            plugin.getStatistics().setCrystalsLost(plugin.getStatistics().getCrystalsLost() + itemDrop.getItemStack().getAmount());
         }
     }
 

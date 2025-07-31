@@ -16,6 +16,7 @@ import org.bukkit.*;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 
@@ -260,27 +261,20 @@ public class CrystalManager implements CrystalsService {
             int t = ticks.getAndIncrement();
             if (t < 20) {
                 crystals.forEach(item -> {
-                    if (item.isValid()) item.setVelocity(new Vector(0, 0.05, 0));
+                    if (item.isValid()) item.setVelocity(new Vector(0, 0.075, 0));
                 });
             } else if (t == 20) {
                 for (int i = 0; i < crystals.size(); i++) {
                     Item item = crystals.get(i);
                     if (!item.isValid()) continue;
                     double angle = angleStep * i;
-                    Vector launch = new Vector(Math.cos(angle), 0.35, Math.sin(angle)).multiply(0.5);
+                    Vector launch = new Vector(Math.cos(angle), 0.88, Math.sin(angle)).multiply(0.2);
                     if (isFinite(launch)) item.setVelocity(launch);
                     item.setGravity(true);
-                    item.setCanPlayerPickup(true);
                     item.setPickupDelay(20);
                     if (player != null) item.setThrower(player.getUniqueId());
                     item.setTicksLived(1);
                 }
-
-                // strip flags now, before any pickups happen
-                crystals.forEach(drop -> {
-                    ArtifactUtil.removeFlagsFromItem(drop, ArtifactFlag.HIDE_DROP_NAME);
-                    ArtifactUtil.removeFlagsFromItem(drop, ArtifactFlag.UNIQUE);
-                });
 
                 SpawnCrystalsEvent spawnCrystalsEvent = new SpawnCrystalsEvent(player, amount, location, source);
                 spawnCrystalsEvent.callEvent();
@@ -288,49 +282,105 @@ public class CrystalManager implements CrystalsService {
                     crystals.forEach(Item::remove);
                     task.cancel();
                 }
-            } else if (t > 60 || crystals.stream().allMatch(Item::isDead)) {
+            } else {
+                crystals.forEach(drop -> {
+                    if (drop.isOnGround() && (ArtifactUtil.hasFlag(drop.getItemStack(), ArtifactFlag.HIDE_DROP_NAME) || ArtifactUtil.hasFlag(drop.getItemStack(), ArtifactFlag.HIDE_DROP_NAME))) {
+                        ArtifactUtil.removeFlagsFromItem(drop, ArtifactFlag.HIDE_DROP_NAME, ArtifactFlag.UNIQUE);
+                        drop.setCanPlayerPickup(true);
+                    }
+                });
+            }
+            if (crystals.stream().allMatch(Item::isDead)) {
                 task.cancel();
             }
         }, 0, 1);
     }
 
-    private void springSequential(@Nullable Player player, int amount, CrystalSource source, Location location) {
-        CrystalArtifact crystalArtifact = (CrystalArtifact) plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL);
-        ItemStack blueprintCrystal = crystalArtifact.createStack(1);
-        ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.HIDE_DROP_NAME);
-        ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.UNIQUE);
-        World world = location.getWorld();
+    private void springSequential(@Nullable Player player,
+                                  int amount,
+                                  CrystalSource source,
+                                  Location origin) {
+        if (amount <= 0) return;
+        World world = origin.getWorld();
+        if (world == null) return;
 
-        int totalTicks = 60;
-        int delay = Math.max(1, totalTicks / amount);
+        CrystalArtifact crystalArtifact =
+                (CrystalArtifact) plugin.getArtifactRegistryService()
+                        .getArtifact(ArtifactNamespacedKeys.CRYSTAL);
 
-        for (int i = 0; i < amount; i++) {
-            int tickDelay = delay * i;
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                ItemStack single = blueprintCrystal.clone();
-                Item crystal = world.dropItem(location.clone(), single);
-                crystal.setCanPlayerPickup(false);
-                crystal.setPickupDelay(20);
-                Vector dir = new Vector(plugin.random().nextDouble() - 0.5, 0.6 + plugin.random().nextDouble() * 0.2, plugin.random().nextDouble() - 0.5).multiply(0.5);
-                if (isFinite(dir)) crystal.setVelocity(dir);
-                if (player != null) crystal.setThrower(player.getUniqueId());
+        // Prepare a one-crystal blueprint with both flags set
+        ItemStack blueprint = crystalArtifact.createStack(1);
+        ArtifactUtil.addFlagsToStack(blueprint, ArtifactFlag.HIDE_DROP_NAME);
+        ArtifactUtil.addFlagsToStack(blueprint, ArtifactFlag.UNIQUE);
 
-                plugin.getCrystalsSFX().crystalAppear.playAtLocation(location);
+        // 1) Show END_ROD particles at the origin
+        world.spawnParticle(
+                Particle.END_ROD,
+                origin.add(0, 1, 0),  // slightly above ground
+                50,                   // count
+                0.15, 0.15, 0.15,        // spreadX,Y,Z
+                0
+        );
 
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    crystal.setCanPlayerPickup(true);
-                    ArtifactUtil.removeFlagsFromItem(crystal, ArtifactFlag.HIDE_DROP_NAME);
-                    ArtifactUtil.removeFlagsFromItem(crystal, ArtifactFlag.UNIQUE);
-                }, 20);
+        // 2) Fire the global spawn event once
+        SpawnCrystalsEvent spawnEvent = new SpawnCrystalsEvent(player, amount, origin, source);
+        spawnEvent.callEvent();
+        if (spawnEvent.isCancelled()) return;
 
-                SpawnCrystalsEvent spawnCrystalsEvent = new SpawnCrystalsEvent(player, 1, location, source);
-                spawnCrystalsEvent.callEvent();
-                if (spawnCrystalsEvent.isCancelled()) {
-                    crystal.remove();
+        // 3) Compute the interval so that the last crystal spawns by ~40 ticks
+        final int flyWindow = 40;
+        final long interval = Math.max(1, flyWindow / amount);
+
+        AtomicInteger spawned = new AtomicInteger(0);
+
+        // 4) Schedule the sequential spawning
+        Bukkit.getScheduler().runTaskTimer(plugin, spawnTask -> {
+            int idx = spawned.getAndIncrement();
+            if (idx >= amount) {
+                spawnTask.cancel();
+                return;
+            }
+
+            // Clone, drop, and configure the new crystal
+            ItemStack single = blueprint.clone();
+            Item crystal = world.dropItem(origin.clone(), single);
+            crystal.setCanPlayerPickup(false);
+            crystal.setPickupDelay(20);
+            if (player != null) {
+                crystal.setThrower(player.getUniqueId());
+            }
+
+            // Give it an initial upward velocity so it “flies out”
+            crystal.setVelocity(new Vector((plugin.random().nextDouble() - 0.5) / 2, 0.3, (plugin.random().nextDouble() - 0.5) / 2));
+
+            // 5) Per‐tick Firework spark at the crystal’s location until it lands
+            Bukkit.getScheduler().runTaskTimer(plugin, particleTask -> {
+                if (crystal.isOnGround()) {
+                    if (crystal.isValid()) {
+                        crystal.setCanPlayerPickup(true);
+                        ArtifactUtil.removeFlagsFromItem(crystal, ArtifactFlag.HIDE_DROP_NAME, ArtifactFlag.UNIQUE);
+                        particleTask.cancel();
+                    }
                 }
-            }, tickDelay);
-        }
+                if (!crystal.isValid() || crystal.isDead()) {
+                    particleTask.cancel();
+                    return;
+                }
+
+                Location loc = crystal.getLocation().add(0, 0.1, 0);
+                world.spawnParticle(
+                        Particle.FIREWORK,
+                        loc,
+                        2,      // small number of sparks per tick
+                        0.1,0.1,0.1,
+                        0       // speed
+                );
+            }, 0L, 1L);
+
+        }, 0L, interval);
     }
+
+
 
     private void circlingExplosion(@Nullable Player player, int amount, CrystalSource source, Location endLocation) {
         if (endLocation == null) {

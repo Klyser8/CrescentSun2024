@@ -16,8 +16,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class ArtifactUtil {
 
@@ -136,35 +138,49 @@ public class ArtifactUtil {
     }
 
     private static void removeFlags(ItemStack stack, @Nullable Item itemEntity, ArtifactFlag... toBeRemoved) {
-        ItemMeta itemMeta = stack.getItemMeta();
-        if (itemMeta == null) {
-            return;
-        }
-        int[] oldFlags = itemMeta.getPersistentDataContainer().get(Artifact.ARTIFACT_FLAGS, PersistentDataType.INTEGER_ARRAY);
-        if (oldFlags == null) {
-            return;
+        ItemMeta meta = stack.getItemMeta();
+        if (meta == null) return;
+
+        var container = meta.getPersistentDataContainer();
+
+        // 1) Remove the integer flags as you already do
+        int[] oldFlags = container.get(Artifact.ARTIFACT_FLAGS, PersistentDataType.INTEGER_ARRAY);
+        if (oldFlags != null) {
+            List<Integer> flagsList = Arrays.stream(oldFlags)
+                    .boxed()
+                    .collect(Collectors.toList());
+            for (ArtifactFlag f : toBeRemoved) {
+                flagsList.removeIf(id -> id == f.getId());
+            }
+            int[] newFlags = flagsList.stream().mapToInt(i -> i).toArray();
+            container.set(Artifact.ARTIFACT_FLAGS, PersistentDataType.INTEGER_ARRAY, newFlags);
         }
 
-        List<Integer> flagsList = new ArrayList<>();
-        for (int flagId : oldFlags) {
-            flagsList.add(flagId);
+        // 2) If UNIQUE is in toBeRemoved, also remove its UUID tag
+        for (ArtifactFlag f : toBeRemoved) {
+            if (f == ArtifactFlag.UNIQUE) {
+                container.remove(Artifact.ITEM_INSTANCE_UUID);
+            }
         }
 
-        for (ArtifactFlag flag : toBeRemoved) {
-            int flagId = flag.getId();
-            flagsList.removeIf(existingFlag -> existingFlag == flagId);
-        }
-
-        int[] newFlags = flagsList.stream().mapToInt(Integer::intValue).toArray();
-
-        itemMeta.getPersistentDataContainer().set(Artifact.ARTIFACT_FLAGS, PersistentDataType.INTEGER_ARRAY, newFlags);
-        stack.setItemMeta(itemMeta);
+        // 3) Save back and update the entity
+        stack.setItemMeta(meta);
         if (itemEntity != null) {
             itemEntity.setItemStack(stack);
         }
-        ArtifactFlagChangeEvent event = new ArtifactFlagChangeEvent(identifyArtifact(stack), stack, itemEntity, null, List.of(toBeRemoved));
-        event.callEvent();
+
+        // 4) Fire your change event
+        ArtifactFlagChangeEvent ev =
+                new ArtifactFlagChangeEvent(
+                        identifyArtifact(stack),
+                        stack,
+                        itemEntity,
+                        null,
+                        List.of(toBeRemoved)
+                );
+        ev.callEvent();
     }
+
 
     /**
      * Adds the specified ArtifactFlags to the given ItemStack.

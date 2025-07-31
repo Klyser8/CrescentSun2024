@@ -61,7 +61,7 @@ public class VaultListener implements Listener {
                 if (!itemDrop.isValid()) {
                     cancel();
                 }
-                boolean vaultStructureValid = VaultManager.isVaultStructureValid(itemDrop.getLocation().add(0, -0.5 - tickCount / 5.0, 0));
+                boolean vaultStructureValid = VaultManager.isVaultStructureValid(itemDrop.getLocation().add(0, -0.3 - tickCount / 4.0, 0));
                 if (!vaultStructureValid) {
                     return;
                 }

@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class CrystalManager implements CrystalsService {
 
+    private static final Vector ZERO_VECTOR = new Vector(0, 0, 0);
     private final Crystals plugin;
     public CrystalManager(Crystals plugin) {
         this.plugin = plugin;
@@ -37,16 +38,27 @@ public class CrystalManager implements CrystalsService {
             plugin.getLogger().warning("Amount of crystals to spawn is out of bounds for the animation. Defaulting to the minimum");
             amount = spawnAnimation.getMin();
         }
-        SpawnCrystalsEvent event = new SpawnCrystalsEvent(player, amount,spawnLocation, source);
+        Location baseLocation;
+        if (spawnLocation != null) {
+            baseLocation = spawnLocation.clone();
+        } else {
+            baseLocation = player != null ? player.getLocation() : null;
+        }
+        if (baseLocation == null) {
+            plugin.getLogger().warning("Unable to determine crystal spawn location");
+            return;
+        }
+        SpawnCrystalsEvent event = new SpawnCrystalsEvent(player, amount, baseLocation, source);
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) {
             return;
         }
         int finalAmount = Math.min(event.getAmount(), 99);
+        Location finalLocation = event.getLocation();
         if (spawnAnimation == CrystalSpawnAnimation.CIRCLING_EXPLOSION) {
-            circlingExplosion(player, finalAmount, source, player.getLocation().clone().add(0, 3, 0));
+            circlingExplosion(player, finalAmount, source, finalLocation.clone().add(0, 3, 0));
         } else if (spawnAnimation == CrystalSpawnAnimation.HOVER) {
-            hover(player, source, spawnLocation);
+            hover(player, source, finalLocation);
         }
     }
 
@@ -61,9 +73,14 @@ public class CrystalManager implements CrystalsService {
         if (event.isCancelled()) {
             return;
         }
-        ItemStack crystalStack = plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL).createStack(event.getAmount());
+        ItemStack crystalStack = plugin.getArtifactRegistryService()
+                .getArtifact(ArtifactNamespacedKeys.CRYSTAL)
+                .createStack(event.getAmount());
         Item crystalItem = location.getWorld().dropItem(location, crystalStack);
         crystalItem.setPickupDelay(10);
+        if (owner != null) {
+            crystalItem.setThrower(owner.getUniqueId());
+        }
     }
 
     @Override
@@ -75,6 +92,9 @@ public class CrystalManager implements CrystalsService {
 
     @Override
     public int getCrystalsInVault(Player player) {
+        if (player == null) {
+            return 0;
+        }
         PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
         Optional<Integer> crystalsInVault = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
         return crystalsInVault.orElse(0);
@@ -82,6 +102,9 @@ public class CrystalManager implements CrystalsService {
 
     @Override
     public void addCrystalsToVault(Player player, int amount) {
+        if (player == null) {
+            return;
+        }
         PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
         Optional<Integer> currentCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
         int newAmount = currentCrystals.orElse(0) + amount;
@@ -90,6 +113,9 @@ public class CrystalManager implements CrystalsService {
 
     @Override
     public void removeCrystalsFromVault(Player player, int amount) {
+        if (player == null) {
+            return;
+        }
         PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
         Optional<Integer> currentCrystals = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT);
         int newAmount = currentCrystals.orElse(0) - amount;
@@ -101,6 +127,9 @@ public class CrystalManager implements CrystalsService {
 
     @Override
     public void setCrystalsInVault(Player player, int amount) {
+        if (player == null) {
+            return;
+        }
         PlayerData playerData = plugin.getPlayerDataService().getData(player.getUniqueId());
         if (amount < 0) {
             amount = 0; // Prevent negative crystals
@@ -108,24 +137,29 @@ public class CrystalManager implements CrystalsService {
         playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_CRYSTALS_IN_VAULT, amount);
     }
 
-    private void hover(@Nullable Player player, CrystalSource source, Location spawnLocation) {
+    private void hover(@Nullable Player player, CrystalSource source, @Nullable Location spawnLocation) {
+        Location baseLocation = spawnLocation != null ? spawnLocation.clone() : (player != null ? player.getLocation() : null);
+        if (baseLocation == null) {
+            plugin.getLogger().warning("Unable to determine crystal spawn location for hover animation");
+            return;
+        }
         CrystalArtifact crystalArtifact = (CrystalArtifact) plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL);
         ItemStack blueprintCrystal = crystalArtifact.createStack(1);
         ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.HIDE_DROP_NAME);
         AtomicInteger movementTicks = new AtomicInteger();
-        AtomicReference<Location> previousTargetLoc = new AtomicReference<>(player != null ? player.getLocation() : spawnLocation);
         // item entity should stay in place for about two seconds, then move 50% of the way between it and the player who won it.
-        Item crystal = spawnLocation.getWorld().dropItem(spawnLocation, blueprintCrystal);
+        AtomicReference<Location> previousTargetLoc = new AtomicReference<>(player != null ? player.getLocation() : baseLocation);
+        Item crystal = baseLocation.getWorld().dropItem(baseLocation, blueprintCrystal);
         crystal.setGravity(false);
-        crystal.setVelocity(new Vector(0, 0, 0));
+        crystal.setVelocity(ZERO_VECTOR.clone());
         crystal.setCanPlayerPickup(false);
         World world = crystal.getWorld();
-        plugin.getCrystalsSFX().crystalAppear.playAtLocation(spawnLocation);
+        plugin.getCrystalsSFX().crystalAppear.playAtLocation(baseLocation);
         Bukkit.getScheduler().runTaskTimer(plugin, bukkitTask -> {
             int ticksLived = crystal.getTicksLived();
             if (ticksLived < 40) {
                 // Reset velocity and position to keep the crystal stationary
-                crystal.setVelocity(new Vector(0, 0, 0));
+                crystal.setVelocity(ZERO_VECTOR.clone());
                 //TODO: refactor this mess
                 world.spawnParticle(Particle.DOLPHIN, crystal.getLocation().clone().add(0, 0.25, 0), 5, 0.25, 0.25, 0.25, 0);
                 if (crystal.getTicksLived() % 4 == 0) {
@@ -135,7 +169,7 @@ public class CrystalManager implements CrystalsService {
             if (ticksLived >= 40) {
                 movementTicks.incrementAndGet();
                 // Apply velocity so that it slowly goes towards the player, for the next 20 seconds - slowing down as it gets closer.
-                Location targetLoc = player != null ? player.getLocation().clone().add(0, 1, 0) : spawnLocation;
+                Location targetLoc = player != null ? player.getLocation().clone().add(0, 1, 0) : baseLocation;
                 if (!targetLoc.toVector().equals(previousTargetLoc.get().toVector())) {
                     movementTicks.set(0);
                 }
@@ -196,6 +230,10 @@ public class CrystalManager implements CrystalsService {
     }
 
     private void circlingExplosion(@Nullable Player player, int amount, CrystalSource source, Location endLocation) {
+        if (endLocation == null) {
+            plugin.getLogger().warning("End location is required for circling explosion animation");
+            return;
+        }
         CrystalArtifact crystalArtifact = (CrystalArtifact) plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL);
         ItemStack blueprintCrystal = crystalArtifact.createStack(1);
         ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.HIDE_DROP_NAME);
@@ -224,7 +262,7 @@ public class CrystalManager implements CrystalsService {
                 Item crystal = world.dropItem(spawnLoc, single);
                 crystal.setCanPlayerPickup(false);
                 crystal.setGravity(false);
-                crystal.setVelocity(new Vector(0, 0, 0));
+                crystal.setVelocity(ZERO_VECTOR.clone());
                 crystals.add(crystal);
             }
 
@@ -269,7 +307,7 @@ public class CrystalManager implements CrystalsService {
                         }
                         crystal.setCanPlayerPickup(true);
                         crystal.setPickupDelay(20);
-                        crystal.setTicksLived(0);
+                        crystal.setTicksLived(1);
                         done = true;
                     }
                 }
@@ -286,7 +324,7 @@ public class CrystalManager implements CrystalsService {
         });
     }
 
-    private boolean isFinite(Vector vector) {
+    private static boolean isFinite(Vector vector) {
         return Double.isFinite(vector.getX()) && Double.isFinite(vector.getY()) && Double.isFinite(vector.getZ());
     }
 

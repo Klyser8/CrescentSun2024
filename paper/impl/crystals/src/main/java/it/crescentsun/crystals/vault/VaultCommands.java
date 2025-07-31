@@ -41,7 +41,7 @@ public class VaultCommands {
     @Command("help")
     public void helpCommand(CommandSender sender) {
         // Show the player the commands for which they have permission
-        StringBuilder helpMessage = new StringBuilder("<#86CDDC>Vault Commands:\n");
+        StringBuilder helpMessage = new StringBuilder("\n<#86CDDC>Vault Commands:\n");
         if (sender.hasPermission("crescent.vault.create")) {
             helpMessage.append("<#FFFFFF>/vault create<#86CDDC> - Create a new vault at your current location.\n");
         }
@@ -49,11 +49,14 @@ public class VaultCommands {
             helpMessage.append("<#FFFFFF>/vault list<#86CDDC> - List the vaults you own on this server.\n");
         }
         if (sender.hasPermission("crescent.vault.list.other")) {
-            helpMessage.append("<#FFFFFF>/vault list <player>#<86CDDC> - List the vaults of another player on this server.\n");
+            helpMessage.append("<#FFFFFF>/vault list <player><#86CDDC> - List the vaults of another player on this server.\n");
         }
         if (sender.hasPermission("crescent.vault.delete")) {
-            helpMessage.append("<#FFFFFF>/vault delete <x> <y> <z>#<86CDDC> - Delete a vault at the specified coordinates.\n");
+            helpMessage.append("<#FFFFFF>/vault delete <x> <y> <z><#86CDDC> - Delete a vault at the specified coordinates.\n");
         }
+        helpMessage.append("<#FFFFFF>/vault help<#86CDDC> - Show this help message.");
+        TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(helpMessage.toString());
+        sender.sendMessage(textComponent);
     }
 
     @Permission("crescent.vault.create")

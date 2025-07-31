@@ -180,6 +180,17 @@ public class ArtifactUtil {
             return item;
         }
 
+        // If any of the flags being added is "UNIQUE", a unique UUID must be applied to the stack.
+        if (toAdd != null) {
+            for (ArtifactFlag flag : toAdd) {
+                if (flag == ArtifactFlag.UNIQUE) {
+                    UUID uniqueId = UUID.randomUUID();
+                    itemMeta.getPersistentDataContainer().set(Artifact.ITEM_INSTANCE_UUID, PersistentDataType.STRING, uniqueId.toString());
+                    break; // Only need to set it once
+                }
+            }
+        }
+
         // Retrieve existing flags from the persistent data container
         int[] oldFlags = itemMeta.getPersistentDataContainer().get(Artifact.ARTIFACT_FLAGS, PersistentDataType.INTEGER_ARRAY);
         List<Integer> flagsList = getNewFlags(toAdd, oldFlags);

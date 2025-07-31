@@ -1,6 +1,7 @@
 package it.crescentsun.crystals;
 
 import it.crescentsun.api.artifacts.ArtifactUtil;
+import it.crescentsun.api.artifacts.item.Artifact;
 import it.crescentsun.api.artifacts.item.ArtifactFlag;
 import it.crescentsun.api.common.ArtifactNamespacedKeys;
 import it.crescentsun.api.common.DatabaseNamespacedKeys;
@@ -59,6 +60,10 @@ public class CrystalManager implements CrystalsService {
             circlingExplosion(player, finalAmount, source, finalLocation.clone().add(0, 3, 0));
         } else if (spawnAnimation == CrystalSpawnAnimation.HOVER) {
             hover(player, source, finalLocation);
+        } else if (spawnAnimation == CrystalSpawnAnimation.SPRING_SIMULTANEOUS) {
+            springSimultaneous(player, finalAmount, source, finalLocation);
+        } else if (spawnAnimation == CrystalSpawnAnimation.SPRING_SEQUENTIAL) {
+            springSequential(player, finalAmount, source, finalLocation);
         }
     }
 
@@ -227,6 +232,104 @@ public class CrystalManager implements CrystalsService {
                 bukkitTask.cancel();
             }
         }, 0, 1);
+    }
+
+    private void springSimultaneous(@Nullable Player player, int amount, CrystalSource source, Location location) {
+        CrystalArtifact crystalArtifact = (CrystalArtifact) plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL);
+        ItemStack blueprintCrystal = crystalArtifact.createStack(1);
+        ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.HIDE_DROP_NAME);
+        World world = location.getWorld();
+        List<Item> crystals = new ArrayList<>();
+
+        for (int i = 0; i < amount; i++) {
+            ItemStack single = blueprintCrystal.clone();
+            ArtifactUtil.addFlagsToStack(single, ArtifactFlag.UNIQUE);
+            Item crystal = world.dropItem(location.clone(), single);
+            crystal.setCanPlayerPickup(false);
+            crystal.setGravity(false);
+            crystal.setVelocity(ZERO_VECTOR.clone());
+            crystals.add(crystal);
+        }
+
+        plugin.getCrystalsSFX().crystalAppear.playAtLocation(location);
+
+        AtomicInteger ticks = new AtomicInteger();
+        double angleStep = (2 * Math.PI) / amount;
+
+        Bukkit.getScheduler().runTaskTimer(plugin, task -> {
+            int t = ticks.getAndIncrement();
+            if (t < 20) {
+                crystals.forEach(item -> {
+                    if (item.isValid()) item.setVelocity(new Vector(0, 0.05, 0));
+                });
+            } else if (t == 20) {
+                for (int i = 0; i < crystals.size(); i++) {
+                    Item item = crystals.get(i);
+                    if (!item.isValid()) continue;
+                    double angle = angleStep * i;
+                    Vector launch = new Vector(Math.cos(angle), 0.35, Math.sin(angle)).multiply(0.5);
+                    if (isFinite(launch)) item.setVelocity(launch);
+                    item.setGravity(true);
+                    item.setCanPlayerPickup(true);
+                    item.setPickupDelay(20);
+                    if (player != null) item.setThrower(player.getUniqueId());
+                    item.setTicksLived(1);
+                }
+
+                // strip flags now, before any pickups happen
+                crystals.forEach(drop -> {
+                    ArtifactUtil.removeFlagsFromItem(drop, ArtifactFlag.HIDE_DROP_NAME);
+                    ArtifactUtil.removeFlagsFromItem(drop, ArtifactFlag.UNIQUE);
+                });
+
+                SpawnCrystalsEvent spawnCrystalsEvent = new SpawnCrystalsEvent(player, amount, location, source);
+                spawnCrystalsEvent.callEvent();
+                if (spawnCrystalsEvent.isCancelled()) {
+                    crystals.forEach(Item::remove);
+                    task.cancel();
+                }
+            } else if (t > 60 || crystals.stream().allMatch(Item::isDead)) {
+                task.cancel();
+            }
+        }, 0, 1);
+    }
+
+    private void springSequential(@Nullable Player player, int amount, CrystalSource source, Location location) {
+        CrystalArtifact crystalArtifact = (CrystalArtifact) plugin.getArtifactRegistryService().getArtifact(ArtifactNamespacedKeys.CRYSTAL);
+        ItemStack blueprintCrystal = crystalArtifact.createStack(1);
+        ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.HIDE_DROP_NAME);
+        ArtifactUtil.addFlagsToStack(blueprintCrystal, ArtifactFlag.UNIQUE);
+        World world = location.getWorld();
+
+        int totalTicks = 60;
+        int delay = Math.max(1, totalTicks / amount);
+
+        for (int i = 0; i < amount; i++) {
+            int tickDelay = delay * i;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                ItemStack single = blueprintCrystal.clone();
+                Item crystal = world.dropItem(location.clone(), single);
+                crystal.setCanPlayerPickup(false);
+                crystal.setPickupDelay(20);
+                Vector dir = new Vector(plugin.random().nextDouble() - 0.5, 0.6 + plugin.random().nextDouble() * 0.2, plugin.random().nextDouble() - 0.5).multiply(0.5);
+                if (isFinite(dir)) crystal.setVelocity(dir);
+                if (player != null) crystal.setThrower(player.getUniqueId());
+
+                plugin.getCrystalsSFX().crystalAppear.playAtLocation(location);
+
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    crystal.setCanPlayerPickup(true);
+                    ArtifactUtil.removeFlagsFromItem(crystal, ArtifactFlag.HIDE_DROP_NAME);
+                    ArtifactUtil.removeFlagsFromItem(crystal, ArtifactFlag.UNIQUE);
+                }, 20);
+
+                SpawnCrystalsEvent spawnCrystalsEvent = new SpawnCrystalsEvent(player, 1, location, source);
+                spawnCrystalsEvent.callEvent();
+                if (spawnCrystalsEvent.isCancelled()) {
+                    crystal.remove();
+                }
+            }, tickDelay);
+        }
     }
 
     private void circlingExplosion(@Nullable Player player, int amount, CrystalSource source, Location endLocation) {

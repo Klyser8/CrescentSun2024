@@ -7,7 +7,7 @@ velocity-api = "3.4.0-SNAPSHOT"
 # Crescent Sun API versions
 crescent-core-api = "2.0.5a"
 crescent-common = "1.0.6"
-artifacts-api = "1.0.21"
+artifacts-api = "1.0.22"
 crystals-api = "1.0.10"
 triumphcmd = "1.0.0"
 

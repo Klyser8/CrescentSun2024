@@ -1,6 +1,6 @@
 [versions]
 # Core
-paper-api = "1.21.8-R0.1-SNAPSHOT"
+paper-api = "1.21.10-R0.1-SNAPSHOT"
 velocity-api = "3.4.0-SNAPSHOT"
 #javax-annotation = "1.3.2"
 
@@ -12,7 +12,7 @@ crystals-api = "1.0.10"
 triumphcmd = "1.0.0"
 
 # Other dependencies
-hikari-cp = "6.3.0"
+hikari-cp = "7.0.2"
 protoweaver = "1.4.9"
 crescentmsg = "1.2.1"
 

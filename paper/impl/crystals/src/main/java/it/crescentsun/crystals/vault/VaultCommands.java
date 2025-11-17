@@ -13,6 +13,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.joml.Vector3i;
 
@@ -52,7 +53,7 @@ public class VaultCommands {
             helpMessage.append("<#FFFFFF>/vault list <player><#86CDDC> - List the vaults of another player on this server.\n");
         }
         if (sender.hasPermission("crescent.vault.delete")) {
-            helpMessage.append("<#FFFFFF>/vault delete <x> <y> <z><#86CDDC> - Delete a vault at the specified coordinates.\n");
+            helpMessage.append("<#FFFFFF>/vault delete <x,y,z><#86CDDC> - Delete a vault at the specified coordinates, or where you're looking if none are provided.\n");
         }
         helpMessage.append("<#FFFFFF>/vault help<#86CDDC> - Show this help message.");
         TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(helpMessage.toString());
@@ -91,20 +92,59 @@ public class VaultCommands {
 
     @Permission("crescent.vault.delete")
     @Command("delete")
-    public void deleteCommand(CommandSender sender, int vaultX, int vaultY, int vaultZ) {
+    public void deleteCommand(CommandSender sender, @Optional String coordsSplitByComma) {
         if (!(sender instanceof Player player)) {
             String raw = "<#DE0A0A>Only players can use this command.";
             TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
             sender.sendMessage(textComponent);
             return;
         }
-        if (vaultX == 0 || vaultY == 0 || vaultZ == 0) {
-            String raw = "<#DE0A0A>Invalid coordinates provided. Please provide valid X, Y, and Z coordinates.";
-            TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
-            sender.sendMessage(textComponent);
+
+        if (coordsSplitByComma == null) {
+            // Get the entity the player is looking at within 5 blocks. If it's a vault, delete it.
+            Entity targetEntity = player.getTargetEntity(5);
+            if (targetEntity == null) {
+                String raw = "<#DE0A0A>No Vault found in sight within 5 blocks. Please specify coordinates to delete a vault.";
+                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
+                sender.sendMessage(textComponent);
+                return;
+            }
+            if (!targetEntity.hasMetadata(VaultData.VAULT_KEY.getKey())) {
+                String raw = "<#DE0A0A>The entity you are looking at is not a Vault. Please specify coordinates to delete one.";
+                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
+                sender.sendMessage(textComponent);
+                return;
+            }
+            UUID vaultUuid = UUID.fromString(targetEntity.getMetadata(VaultData.VAULT_KEY.getKey()).getFirst().asString());
+            VaultData vault = vaultManager.deleteVault(vaultUuid);
+            if (vault == null){
+                String raw = "<#DE0A0A>Something went wrong while trying to delete the vault.";
+                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
+                sender.sendMessage(textComponent);
+            } else {
+                String raw = "<#FFDE59>Deleted vault at " +
+                        "<#ffffff>" + vault.getLocation().getWorld().getName() + " (" +
+                        vault.getLocation().getBlockX() + ", " +
+                        vault.getLocation().getBlockY() + ", " +
+                        vault.getLocation().getBlockZ() + ")";
+                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
+                sender.sendMessage(textComponent);
+            }
         }
         else {
             // Delete the vault at the specified coordinates
+            String[] coords = coordsSplitByComma.split(",");
+            int vaultX, vaultY, vaultZ;
+            try {
+                vaultX = Integer.parseInt(coords[0].trim());
+                vaultY = Integer.parseInt(coords[1].trim());
+                vaultZ = Integer.parseInt(coords[2].trim());
+            } catch (NumberFormatException e) {
+                String raw = "<#DE0A0A>Invalid coordinates provided. Please provide valid X, Y, and Z coordinates, split with commas";
+                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
+                sender.sendMessage(textComponent);
+                return;
+            }
             VaultData vault = vaultManager.deleteVault(new Location(player.getWorld(), vaultX, vaultY, vaultZ));
             if (vault == null) {
                 String raw = "<#DE0A0A>Could not find a vault at the specified coordinates. Are you in the right world / server?";

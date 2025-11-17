@@ -55,14 +55,17 @@ public class VaultListener implements Listener {
 
         new BukkitRunnable() {
             private int tickCount = 0;
+            private boolean vaultStructureValid;
 
             @Override
             public void run() {
                 if (!itemDrop.isValid()) {
                     cancel();
                 }
-                boolean vaultStructureValid = VaultManager.isVaultStructureValid(itemDrop.getLocation().add(0, -0.3 - tickCount / 4.0, 0));
+
+                // If the vault structure is considered valid at least once, we can proceed to the next steps.
                 if (!vaultStructureValid) {
+                    vaultStructureValid = VaultManager.isVaultStructureValid(itemDrop.getLocation().add(0, -0.3 - tickCount / 4.0, 0));
                     return;
                 }
                 Player owner = event.getPlayer();
@@ -95,7 +98,7 @@ public class VaultListener implements Listener {
                     centre = centre.clone().add(0, 1, 0);
                     world.spawnParticle(Particle.FISHING, centre, 100, 0, 0, 0, 0.05);
                     world.spawnParticle(Particle.FIREWORK, centre, 25, 0.25, 0.25, 0.25, 0.2);
-                    world.spawnParticle(Particle.FLASH, centre, 1);
+                    world.spawnParticle(Particle.FLASH, centre, 1, Color.BLUE);
                     Location lodestoneLocation = itemDrop.getLocation().add(0, -1, 0);
                     VaultData playerVault = plugin.getVaultManager().createVault(owner, lodestoneLocation, false);
                     itemDrop.getItemStack().setAmount(itemDrop.getItemStack().getAmount() - 1);

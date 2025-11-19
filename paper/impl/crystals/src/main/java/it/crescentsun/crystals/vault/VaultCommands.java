@@ -15,6 +15,7 @@ import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 import org.joml.Vector3i;
 
 import java.util.UUID;
@@ -70,10 +71,10 @@ public class VaultCommands {
             return;
         }
         Location vaultOrigin = player.getLocation().add(0, -1, 0);
-        for (Vector3i blockLoc : VaultManager.vaultBlockOffsets.keySet()) {
+        for (Vector blockLoc : VaultManager.vaultBlockOffsets.keySet()) {
             Material blockType = VaultManager.vaultBlockOffsets.get(blockLoc);
             vaultOrigin.getWorld().setBlockData(
-                    vaultOrigin.clone().add(blockLoc.x, blockLoc.y, blockLoc.z),
+                    vaultOrigin.clone().add(blockLoc.getBlockX(), blockLoc.getBlockY(), blockLoc.getBlockZ()),
                     blockType.createBlockData()
             );
         }

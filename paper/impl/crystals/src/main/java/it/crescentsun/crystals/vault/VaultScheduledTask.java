@@ -51,7 +51,7 @@ public class VaultScheduledTask extends BukkitRunnable {
 
         // 1) Vault BlockDisplay
         World world = vaultData.getLocation().getWorld();
-        Location vaultOrigin = vaultData.getLocation().add(0.5, 2.0, 0.5);
+        Location vaultOrigin = vaultData.getLocation().add(0.5, 1.0, 0.5);
         vaultEntity = world.spawn(
                 vaultOrigin,
                 BlockDisplay.class, bd -> {
@@ -64,7 +64,7 @@ public class VaultScheduledTask extends BukkitRunnable {
 
         // 2) TextDisplay
         textDisplay = world.spawn(
-                vaultData.getLocation().add(0.5, 2.5, 0.5),
+                vaultData.getLocation().add(0.5, 1.5, 0.5),
                 TextDisplay.class, td -> {
                     td.setBillboard(Display.Billboard.CENTER);
                     td.setGravity(false);

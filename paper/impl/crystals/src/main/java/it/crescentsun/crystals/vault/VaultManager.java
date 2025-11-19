@@ -11,9 +11,9 @@ import it.crescentsun.crystals.Crystals;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3i;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -24,12 +24,12 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
         super(plugin, VaultData.class, pluginDataService);
     }
 
-    public static Map<Vector3i, Material> vaultBlockOffsets = Map.of(
-            new Vector3i(0, 0, 0), Material.LODESTONE,
-            new Vector3i(1, 0, 0), Material.DIAMOND_BLOCK,
-            new Vector3i(-1, 0, 0), Material.DIAMOND_BLOCK,
-            new Vector3i(0, 0, 1), Material.DIAMOND_BLOCK,
-            new Vector3i(0, 0, -1),  Material.DIAMOND_BLOCK
+    public static Map<Vector, Material> vaultBlockOffsets = Map.of(
+            new Vector(0, 0, 0), Material.LODESTONE,
+            new Vector(1, 0, 0), Material.DIAMOND_BLOCK,
+            new Vector(-1, 0, 0), Material.DIAMOND_BLOCK,
+            new Vector(0, 0, 1), Material.DIAMOND_BLOCK,
+            new Vector(0, 0, -1),  Material.DIAMOND_BLOCK
             );
 
     public VaultData createVault(Player owner, Location location, boolean isPublic) {
@@ -163,10 +163,10 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
      * @return Whether the structure is valid or not.
      */
     public static boolean isVaultStructureValid(@NotNull Location location) {
-        for (Map.Entry<Vector3i, Material> entry : vaultBlockOffsets.entrySet()) {
-            Vector3i offset = entry.getKey();
+        for (Map.Entry<Vector, Material> entry : vaultBlockOffsets.entrySet()) {
+            Vector offset = entry.getKey();
             Material expectedMaterial = entry.getValue();
-            Location blockLocation = location.clone().add(offset.x, offset.y, offset.z);
+            Location blockLocation = location.clone().add(offset.getBlockX(), offset.getBlockY(), offset.getBlockZ());
             if (blockLocation.getBlock().getType() != expectedMaterial) {
                 return false; // If any block does not match the expected material, return false
             }

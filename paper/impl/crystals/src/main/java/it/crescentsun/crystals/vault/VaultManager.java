@@ -181,4 +181,13 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
                 .map(VaultData::getUuid)
                 .toArray(UUID[]::new);
     }
+
+    /**
+     * @return An array containing all the public vaults found in this server.
+     */
+    public VaultData[] getAllPublicVaults() {
+        return getAllData(true).stream()
+                .filter(VaultData::isPublic)
+                .toArray(VaultData[]::new);
+    }
 }

@@ -127,6 +127,11 @@ public final class Crystals extends CrescentPlugin implements CrystalsAPI, Artif
     public void onDataLoad() {
         setStatistics(getPluginDataService().getData(CrystalsStatistics.class, Crystals.STATISTICS_UUID));
         setSettings(getPluginDataService().getData(CrystalsSettings.class, Crystals.SETTINGS_UUID));
+
+        // Load public vaults
+        for (VaultData data : getVaultManager().getAllPublicVaults()) {
+            data.tryInit();
+        }
     }
 
     public CrystalsStatistics getStatistics() {

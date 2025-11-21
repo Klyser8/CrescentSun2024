@@ -5,7 +5,7 @@ import it.crescentsun.crystals.Crystals;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.entity.*;
-import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
@@ -58,7 +58,7 @@ public class VaultScheduledTask extends BukkitRunnable {
                     bd.setBlock(Material.BEACON.createBlockData());
                     bd.setGravity(false);
                     bd.setTransformationMatrix(vaultMatrix);
-                    bd.setMetadata(VaultData.VAULT_KEY.getKey(), new FixedMetadataValue(plugin, vaultData.getUuid()));
+                    bd.getPersistentDataContainer().set(VaultData.VAULT_KEY, PersistentDataType.STRING, vaultData.getUuid().toString());
                 }
         );
 
@@ -94,7 +94,7 @@ public class VaultScheduledTask extends BukkitRunnable {
                         ld.setInterpolationDelay(0);
                         ld.setInterpolationDuration(3);
                         ld.setTransformationMatrix(lanternBaseMatrix);
-                        ld.setMetadata(VaultData.VAULT_KEY.getKey(), new FixedMetadataValue(plugin, vaultData.getUuid()));
+                        ld.getPersistentDataContainer().set(VaultData.VAULT_KEY, PersistentDataType.STRING, vaultData.getUuid().toString());
                     }
             );
         }
@@ -104,7 +104,7 @@ public class VaultScheduledTask extends BukkitRunnable {
             entity.setInteractionWidth(0.6f);
             entity.setResponsive(true);
             entity.setGravity(false);
-            entity.setMetadata(VaultData.VAULT_KEY.getKey(), new FixedMetadataValue(plugin, vaultData.getUuid()));
+            entity.getPersistentDataContainer().set(VaultData.VAULT_KEY, PersistentDataType.STRING, vaultData.getUuid().toString());
         });
     }
 

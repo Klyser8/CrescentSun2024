@@ -23,6 +23,8 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
@@ -222,10 +224,12 @@ public class VaultListener implements Listener {
         if (!(rightClicked instanceof Interaction interactionEntity)) {
             return;
         }
-        if (!interactionEntity.hasMetadata(VaultData.VAULT_KEY.getKey())) {
+        PersistentDataContainer pdc = interactionEntity.getPersistentDataContainer();
+        String vaultStringUuid = pdc.get(VaultData.VAULT_KEY, PersistentDataType.STRING);
+        if (vaultStringUuid == null) {
             return;
         }
-        UUID vaultUuid = UUID.fromString(interactionEntity.getMetadata(VaultData.VAULT_KEY.getKey()).getFirst().asString());
+        UUID vaultUuid = UUID.fromString(vaultStringUuid);
         VaultData vaultData = plugin.getVaultManager().getDataInstance(vaultUuid);
 
         if (vaultData == null) {

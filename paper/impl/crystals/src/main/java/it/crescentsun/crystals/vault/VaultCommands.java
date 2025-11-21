@@ -15,6 +15,8 @@ import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 import org.joml.Vector3i;
 
@@ -70,11 +72,11 @@ public class VaultCommands {
             sender.sendMessage(textComponent);
             return;
         }
-        Location vaultOrigin = player.getLocation().add(0, -1, 0);
+        Location vaultOrigin = player.getLocation().add(0, 0, 0);
         for (Vector blockLoc : VaultManager.vaultBlockOffsets.keySet()) {
             Material blockType = VaultManager.vaultBlockOffsets.get(blockLoc);
             vaultOrigin.getWorld().setBlockData(
-                    vaultOrigin.clone().add(blockLoc.getBlockX(), blockLoc.getBlockY(), blockLoc.getBlockZ()),
+                    vaultOrigin.clone().add(blockLoc.getBlockX(), blockLoc.getBlockY() - 1, blockLoc.getBlockZ()),
                     blockType.createBlockData()
             );
         }
@@ -110,13 +112,15 @@ public class VaultCommands {
                 sender.sendMessage(textComponent);
                 return;
             }
-            if (!targetEntity.hasMetadata(VaultData.VAULT_KEY.getKey())) {
+            PersistentDataContainer pdc = targetEntity.getPersistentDataContainer();
+            String vaultStringUuid = pdc.get(VaultData.VAULT_KEY, PersistentDataType.STRING);
+            if (vaultStringUuid == null) {
                 String raw = "<#DE0A0A>The entity you are looking at is not a Vault. Please specify coordinates to delete one.";
                 TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
                 sender.sendMessage(textComponent);
                 return;
             }
-            UUID vaultUuid = UUID.fromString(targetEntity.getMetadata(VaultData.VAULT_KEY.getKey()).getFirst().asString());
+            UUID vaultUuid = UUID.fromString(vaultStringUuid);
             VaultData vault = vaultManager.deleteVault(vaultUuid);
             if (vault == null){
                 String raw = "<#DE0A0A>Something went wrong while trying to delete the vault.";

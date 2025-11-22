@@ -102,8 +102,32 @@ public class VaultData extends PluginData {
         if (bukkitTask != null) {
             return;
         }
+        // Only start the task if the owner is online or if it's a public vault
+        if (!isPublic() && Bukkit.getPlayer(ownerUuid) == null) {
+            return;
+        }
+
+        Location location = getLocation();
+        World world = location.getWorld();
+        if (world == null) {
+            owningPlugin.getLogger().warning("Failed to start vault task: world is null for vault " + uuid);
+            return;
+        }
+
+        // This is equivalent to dividing by 16.
+        int chunkX = location.getBlockX() >> 4;
+        int chunkZ = location.getBlockZ() >> 4;
+        if (!world.isChunkLoaded(chunkX, chunkZ)) {
+            return; // wait for the chunk to load before spawning display entities
+        }
         // Schedule on the main thread to avoid AsyncCatcher exceptions
         Bukkit.getScheduler().runTask(owningPlugin, () -> {
+            if (bukkitTask != null) {
+                return;
+            }
+            if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                return; // chunk unloaded before the task could start
+            }
             bukkitTask = new VaultScheduledTask((Crystals) owningPlugin, ownerUuid, this);
             bukkitTask.runTaskTimer(owningPlugin, 0, 1);
             refreshVaultNameTag();

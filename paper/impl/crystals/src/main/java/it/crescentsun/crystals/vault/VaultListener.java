@@ -24,6 +24,8 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -36,6 +38,7 @@ import it.crescentsun.api.crescentcore.event.player.PlayerJoinEventPostDBLoad;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 public class VaultListener implements Listener {
 
@@ -345,6 +348,31 @@ public class VaultListener implements Listener {
                 data.stopTask();
             }
         }
+    }
+
+    @EventHandler
+    public void onChunkUnload(ChunkUnloadEvent event) {
+        getVaultsInChunk(event.getChunk()).forEach(VaultData::stopTask);
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        getVaultsInChunk(event.getChunk())
+                .filter(data -> data.isPublic() || Bukkit.getPlayer(data.getOwnerUUID()) != null)
+                .forEach(VaultData::startTask);
+    }
+
+    private Stream<VaultData> getVaultsInChunk(Chunk chunk) {
+        return plugin.getVaultManager().getAllData(true).stream()
+                .filter(data -> {
+                    Location location = data.getLocation();
+                    World world = location.getWorld();
+                    if (world == null || !world.equals(chunk.getWorld())) {
+                        return false;
+                    }
+                    return chunk.getX() == (location.getBlockX() >> 4)
+                            && chunk.getZ() == (location.getBlockZ() >> 4);
+                });
     }
 
     /**

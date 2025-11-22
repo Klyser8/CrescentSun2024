@@ -5,8 +5,10 @@ import it.crescentsun.api.artifacts.item.Artifact;
 import it.crescentsun.api.common.ArtifactNamespacedKeys;
 import it.crescentsun.api.common.DatabaseNamespacedKeys;
 import it.crescentsun.api.crescentcore.data.player.PlayerData;
+import it.crescentsun.api.crescentcore.util.AdvancementUtil;
 import it.crescentsun.api.crystals.CrystalSource;
 import it.crescentsun.api.crystals.event.AddCrystalsEvent;
+import it.crescentsun.api.crystals.event.CreateVaultEvent;
 import it.crescentsun.api.crystals.event.DestroyVaultEvent;
 import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import it.crescentsun.crystals.Crystals;
@@ -174,8 +176,7 @@ public class VaultListener implements Listener {
             }
             VaultData vault = plugin.getVaultManager().deleteVault(closestVault.getUuid());
             plugin.getCrystalsSFX().vaultBreak.playAtLocation(breakLoc);
-            String raw = ""
-                    + CrescentHexCodes.RED + "You have destroyed the Crystal Vault found at <yellow>%d<white>, <yellow>%d<white>, <yellow>%d<white>.";
+            String raw = CrescentHexCodes.RED + "You have destroyed the Crystal Vault found at <yellow>%d<white>, <yellow>%d<white>, <yellow>%d<white>.";
 
             String formatted = String.format(raw, vault.getX(), vault.getY(), vault.getZ());
             player.sendMessage(MiniMessage.miniMessage().deserialize(formatted));
@@ -188,6 +189,17 @@ public class VaultListener implements Listener {
                     CrescentHexCodes.RED + "You cannot break this vault, as you are not its owner."
             ));
         }
+    }
+
+    @EventHandler
+    public void onVaultCreate(CreateVaultEvent event) {
+        Player owner = event.getOwner();
+        // Award advancement, if in crescentcraft and if not already awarded
+        if (!plugin.getCrescentCoreAPI().getServerName().equalsIgnoreCase("crescentcraft")) {
+            return;
+        }
+
+        AdvancementUtil.awardAdvancementCriteria(owner, "crescentsun:crescentcraft/build_vault", "build_vault");
     }
 
     @EventHandler

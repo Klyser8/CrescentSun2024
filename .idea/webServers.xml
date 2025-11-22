@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="9aa137c4-92cf-4030-a383-06eb563ba47a" name="crescentsun.it:11122">
-        <fileTransfer rootFolder="/home/sysadmin/crescent-sun" accessType="SFTP" host="crescentsun.it" port="11122" sshConfigId="fdcac364-5caa-4ebf-912c-f2f42bb8da95" sshConfig="sysadmin@crescentsun.it:11122 password">
+        <fileTransfer rootFolder="/home/sysadmin/crescent-sun" accessType="SFTP" host="crescentsun.it" port="12622" sshConfigId="fdcac364-5caa-4ebf-912c-f2f42bb8da95" sshConfig="tomrom@crescentsun.it:12622 password">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

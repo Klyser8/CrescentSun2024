@@ -211,14 +211,6 @@ public class CrystalManager implements CrystalsService {
                 }
             }
             if (ticksLived == 60) {
-                SpawnCrystalsEvent incrementEvent = new SpawnCrystalsEvent(player, blueprintCrystal.getAmount(), crystal.getLocation(), source);
-                incrementEvent.callEvent();
-                if (incrementEvent.isCancelled()) {
-                    crystal.remove();
-                    bukkitTask.cancel();
-                    return;
-                }
-
                 crystal.setGravity(true);
                 crystal.setPickupDelay(20);
                 crystal.setCanPlayerPickup(true);
@@ -275,13 +267,6 @@ public class CrystalManager implements CrystalsService {
                     if (player != null) item.setThrower(player.getUniqueId());
                     item.setTicksLived(1);
                 }
-
-                SpawnCrystalsEvent spawnCrystalsEvent = new SpawnCrystalsEvent(player, amount, location, source);
-                spawnCrystalsEvent.callEvent();
-                if (spawnCrystalsEvent.isCancelled()) {
-                    crystals.forEach(Item::remove);
-                    task.cancel();
-                }
             } else {
                 crystals.forEach(drop -> {
                     if (drop.isOnGround() && (ArtifactUtil.hasFlag(drop.getItemStack(), ArtifactFlag.HIDE_DROP_NAME) || ArtifactUtil.hasFlag(drop.getItemStack(), ArtifactFlag.HIDE_DROP_NAME))) {
@@ -321,11 +306,6 @@ public class CrystalManager implements CrystalsService {
                 0.15, 0.15, 0.15,        // spreadX,Y,Z
                 0
         );
-
-        // 2) Fire the global spawn event once
-        SpawnCrystalsEvent spawnEvent = new SpawnCrystalsEvent(player, amount, origin, source);
-        spawnEvent.callEvent();
-        if (spawnEvent.isCancelled()) return;
 
         // 3) Compute the interval so that the last crystal spawns by ~40 ticks
         final int flyWindow = 40;
@@ -466,11 +446,6 @@ public class CrystalManager implements CrystalsService {
                 }
 
                 if (done) {
-                    SpawnCrystalsEvent spawnCrystalsEvent = new SpawnCrystalsEvent(player, amount, endLocation, source);
-                    spawnCrystalsEvent.callEvent();
-                    if (spawnCrystalsEvent.isCancelled()) {
-                        crystals.forEach(Item::remove);
-                    }
                     task.cancel();
                 }
             }, 0, 1);

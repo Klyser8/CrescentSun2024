@@ -23,6 +23,7 @@ import it.crescentsun.crescentcore.data.ServerStatistics;
 import it.crescentsun.crescentcore.event.AutoSaveEvent;
 import it.crescentsun.crescentcore.lang.CrescentCoreLocalization;
 import it.crescentsun.crescentcore.listener.CrescentCoreListener;
+import it.crescentsun.crescentcore.listener.MiscListener;
 import it.crescentsun.crescentcore.network.CrescentSunServerHandler;
 import it.crescentsun.triumphcmd.bukkit.BukkitCommandManager;
 import me.mrnavastar.protoweaver.api.netty.ProtoConnection;
@@ -75,6 +76,7 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
 
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(new CrescentCoreListener(this), this);
+        getServer().getPluginManager().registerEvents(new MiscListener(this), this);
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         BukkitCommandManager<CommandSender> commandManager = BukkitCommandManager.create(this);
         commandManager.registerCommand(new CrescentCoreCommands(this));

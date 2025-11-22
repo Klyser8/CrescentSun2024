@@ -7,6 +7,7 @@ import it.crescentsun.api.common.ArtifactNamespacedKeys;
 import it.crescentsun.api.common.DatabaseNamespacedKeys;
 import it.crescentsun.api.crescentcore.data.player.PlayerData;
 import it.crescentsun.api.crescentcore.event.player.PlayerJoinEventPostDBLoad;
+import it.crescentsun.api.crescentcore.util.AdvancementUtil;
 import it.crescentsun.api.crystals.CrystalSource;
 import it.crescentsun.api.crystals.CrystalSpawnAnimation;
 import it.crescentsun.api.crystals.event.AddCrystalsEvent;
@@ -16,6 +17,7 @@ import it.crescentsun.crescentmsg.api.CrescentHexCodes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -111,6 +113,7 @@ public class CrystalListener implements Listener {
             Component singularMessage = miniMessage.deserialize(CrescentHexCodes.DROPLET + "A Crystal has appeared before you.");
             player.sendActionBar(amount > 1 ? pluralMessage : singularMessage);
         }
+        AdvancementUtil.awardAdvancementCriteria(player, "crescentsun:crescentcraft/obtain_crystals", "obtain_crystals");
     }
 
     @EventHandler

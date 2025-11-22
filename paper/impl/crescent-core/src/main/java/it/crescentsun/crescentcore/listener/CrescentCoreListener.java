@@ -1,5 +1,6 @@
 package it.crescentsun.crescentcore.listener;
 
+import io.papermc.paper.event.player.AsyncPlayerSpawnLocationEvent;
 import it.crescentsun.api.common.DatabaseNamespacedKeys;
 import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.api.crescentcore.data.player.PlayerData;
@@ -104,7 +105,7 @@ public class CrescentCoreListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onPlayerSpawnPostJoin(PlayerSpawnLocationEvent event) {
+    public void onPlayerSpawnPostJoin(AsyncPlayerSpawnLocationEvent event) {
         if (crescentCore.getServerName().contains("lobby")) {
             //noinspection DataFlowIssue
             event.setSpawnLocation(Bukkit.getWorld("world").getSpawnLocation());

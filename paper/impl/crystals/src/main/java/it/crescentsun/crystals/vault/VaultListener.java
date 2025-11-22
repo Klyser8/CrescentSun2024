@@ -198,8 +198,9 @@ public class VaultListener implements Listener {
         if (!plugin.getCrescentCoreAPI().getServerName().equalsIgnoreCase("crescentcraft")) {
             return;
         }
-
-        AdvancementUtil.awardAdvancementCriteria(owner, "crescentsun:crescentcraft/build_vault", "build_vault");
+        Bukkit.getScheduler().runTaskLater(plugin, () ->
+                AdvancementUtil.awardAdvancementCriteria(owner, "crescentsun:crescentcraft/build_vault", "build_vault"),
+                20);
     }
 
     @EventHandler
@@ -289,6 +290,7 @@ public class VaultListener implements Listener {
                                     CrescentHexCodes.FUCHSIA + " crystals into your Crystal Vault! "
                     )
             );
+            plugin.getCrystalsSFX().depositCrystals.playAtLocation(event.getRightClicked().getLocation());
             vaultData.refreshVaultNameTag();
         } else {
             // Open vault inventory

@@ -48,6 +48,10 @@ public class CrystalListener implements Listener {
         if (display == null) {
             return;
         }
+        // Do not give crystals for root advancements
+        if (display.backgroundPath() != null) {
+            return;
+        }
         AdvancementDisplay.Frame frame = display.frame();
         if (frame.equals(AdvancementDisplay.Frame.CHALLENGE)) {
             plugin.getCrystalsService().spawnCrystals(player, 4, CrystalSource.ADVANCEMENT,
@@ -113,7 +117,18 @@ public class CrystalListener implements Listener {
             Component singularMessage = miniMessage.deserialize(CrescentHexCodes.DROPLET + "A Crystal has appeared before you.");
             player.sendActionBar(amount > 1 ? pluralMessage : singularMessage);
         }
-        AdvancementUtil.awardAdvancementCriteria(player, "crescentsun:crescentcraft/obtain_crystals", "obtain_crystals");
+    }
+
+    @EventHandler
+    public void onCrystalPickup(PlayerAttemptPickupItemEvent event) {
+        ItemStack itemStack = event.getItem().getItemStack();
+        Artifact artifact = ArtifactUtil.identifyArtifact(itemStack);
+        if (artifact == null) {
+            return;
+        }
+        if (artifact.namespacedKey().equals(ArtifactNamespacedKeys.CRYSTAL)) {
+            AdvancementUtil.awardAdvancementCriteria(event.getPlayer(), "crescentsun:crescentcraft/obtain_crystals", "obtain_crystals");
+        }
     }
 
     @EventHandler

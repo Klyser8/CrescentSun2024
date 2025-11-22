@@ -17,6 +17,7 @@ public class CrystalsSFX {
     public final CompositeSoundEffect vaultBreak;
     public final CompositeSoundEffect vaultOpen;
     public final CompositeSoundEffect vaultClose;
+    public final SoundEffect depositCrystals;
 
     public CrystalsSFX(CrescentPlugin plugin) {
         crystalAppear = new SoundEffect(plugin, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.75f, 2.0f);
@@ -50,5 +51,7 @@ public class CrystalsSFX {
                 new SoundEffect(plugin, Sound.BLOCK_SHULKER_BOX_CLOSE, SoundCategory.BLOCKS, 1.0f, 1.66f),
                 new TimedSoundEffect(plugin, Sound.BLOCK_ENCHANTMENT_TABLE_USE, SoundCategory.BLOCKS, 1, 1.2f, 2)
         );
+
+        depositCrystals = new SoundEffect(plugin, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.BLOCKS, 0.75f, 2.0f);
     }
 }

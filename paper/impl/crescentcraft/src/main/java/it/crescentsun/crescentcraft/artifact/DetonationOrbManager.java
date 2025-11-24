@@ -13,23 +13,27 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Waterlogged;
-import org.bukkit.block.data.type.CoralWallFan;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockFadeEvent;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
-import java.awt.*;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraft, DetonationOrbData> implements Listener {
@@ -42,6 +46,7 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
     private final SoundEffect explodeSound;
 
     private final Multimap<UUID, PendingNotification> pendingNotifications = ArrayListMultimap.create();
+    private final Map<UUID, BukkitTask> orbTasks = new HashMap<>();
 
     public DetonationOrbManager(CrescentCraft plugin, PluginDataService pluginDataService) {
         super(plugin, DetonationOrbData.class, pluginDataService);
@@ -72,14 +77,18 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
         if (System.currentTimeMillis() - data.getPlacedAt() < MAX_LIFETIME.toMillis()) {
             return false;
         }
-        removeOrbBlock(data.getLocation());
+        deleteOrbData(data, true);
         notifyOwner(data);
-        data.deleteAndSync();
         return true;
     }
 
     public void startOrbTask(DetonationOrbData data) {
-        plugin.getServer().getScheduler().runTask(plugin, () -> new DetonationOrbRunnable(data).runTaskTimer(plugin, 0L, 4L));
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            cancelOrbTask(data.getUuid());
+            DetonationOrbRunnable runnable = new DetonationOrbRunnable(data);
+            BukkitTask task = runnable.runTaskTimer(plugin, 0L, 4L);
+            orbTasks.put(data.getUuid(), task);
+        });
     }
 
     @EventHandler
@@ -104,6 +113,23 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
                     .filter(d -> d.getZ() == loc.getBlockZ())
                     .findFirst().ifPresent(data -> event.setCancelled(true));
         }
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        if (!isOrbBlock(block.getType())) {
+            return;
+        }
+
+        Location location = block.getLocation();
+        getAllData(true).stream()
+                .filter(d -> d.getWorldUuid().equals(location.getWorld().getUID()))
+                .filter(d -> d.getX() == location.getBlockX())
+                .filter(d -> d.getY() == location.getBlockY())
+                .filter(d -> d.getZ() == location.getBlockZ())
+                .findFirst()
+                .ifPresent(this::deleteOrbData);
     }
 
     private void deliverNotifications(Player player) {
@@ -141,10 +167,17 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
 
     private void prepareBlock(Location location, Material material) {
         Runnable task = () -> {
-            location.getBlock().setType(material);
-            Waterlogged blockData = ((Waterlogged) location.getBlock().getBlockData());
-            blockData.setWaterlogged(false);
-            location.getBlock().setBlockData(blockData);
+            if (location.getWorld() == null) {
+                return;
+            }
+            Block block = location.getBlock();
+            block.setType(material);
+            BlockData blockData = block.getBlockData();
+            if (blockData instanceof Waterlogged waterlogged) {
+                waterlogged.setWaterlogged(false);
+                blockData = waterlogged;
+            }
+            block.setBlockData(blockData);
         };
         if (Bukkit.isPrimaryThread()) {
             task.run();
@@ -163,6 +196,29 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
         } else {
             plugin.getServer().getScheduler().runTask(plugin, task);
         }
+    }
+
+    private void cancelOrbTask(UUID uuid) {
+        BukkitTask task = orbTasks.remove(uuid);
+        if (task != null) {
+            task.cancel();
+        }
+    }
+
+    private void deleteOrbData(DetonationOrbData data) {
+        deleteOrbData(data, false);
+    }
+
+    private void deleteOrbData(DetonationOrbData data, boolean removeBlock) {
+        cancelOrbTask(data.getUuid());
+        if (removeBlock) {
+            removeOrbBlock(data.getLocation());
+        }
+        data.deleteAndSync();
+    }
+
+    private boolean isOrbBlock(Material material) {
+        return material == Material.FIRE_CORAL_FAN || material == Material.DEAD_FIRE_CORAL_FAN;
     }
 
     private class DetonationOrbRunnable extends BukkitRunnable {
@@ -188,7 +244,7 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
         @Override
         public void run() {
             if (world == null) {
-                data.deleteAndSync();
+                deleteOrbData(data);
                 cancel();
                 return;
             }
@@ -260,8 +316,7 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
         }
 
         private void remove() {
-            removeOrbBlock(location);
-            data.deleteAndSync();
+            deleteOrbData(data, true);
             cancel();
         }
     }

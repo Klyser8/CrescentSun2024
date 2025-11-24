@@ -55,7 +55,15 @@ public class ArtifactListener implements Listener {
 
         Action action = event.getAction();
         boolean isSneaking = player.isSneaking();
-        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(artifact, item, player, action, event.getHand(), null, event.getClickedBlock());
+        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(
+                artifact,
+                item,
+                player,
+                action,
+                event.getHand(),
+                null,
+                event.getClickedBlock(),
+                event.getBlockFace());
         if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
             if (isSneaking) {
                 event.setCancelled(artifact.interactShiftRight(artifactInteractEvent));
@@ -87,7 +95,15 @@ public class ArtifactListener implements Listener {
             return;
         }
 
-        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(artifact, item, player, Action.RIGHT_CLICK_AIR, event.getHand(), event.getRightClicked(), null);
+        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(
+                artifact,
+                item,
+                player,
+                Action.RIGHT_CLICK_AIR,
+                event.getHand(),
+                event.getRightClicked(),
+                null,
+                null);
         if (player.isSneaking()) {
             event.setCancelled(artifact.interactShiftRight(artifactInteractEvent));
             artifactInteractEvent.callEvent();
@@ -109,7 +125,15 @@ public class ArtifactListener implements Listener {
             return;
         }
 
-        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(artifact, item, player, Action.LEFT_CLICK_AIR, EquipmentSlot.HAND, event.getAttacked(), null);
+        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(
+                artifact,
+                item,
+                player,
+                Action.LEFT_CLICK_AIR,
+                EquipmentSlot.HAND,
+                event.getAttacked(),
+                null,
+                null);
         if (player.isSneaking()) {
             event.setCancelled(artifact.interactShiftLeft(artifactInteractEvent));
             artifactInteractEvent.callEvent();

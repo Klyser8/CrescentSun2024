@@ -3,6 +3,7 @@ package it.crescentsun.artifacts.registry;
 import it.crescentsun.artifacts.Artifacts;
 import it.crescentsun.api.artifacts.ArtifactRegistryService;
 import it.crescentsun.api.artifacts.item.Artifact;
+import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 
 import java.util.Collection;
@@ -15,7 +16,7 @@ public class ArtifactRegistry implements ArtifactRegistryService {
 
     @Override
     public void registerArtifact(Artifact artifact) {
-        Artifacts.logger().info("Registering artifact: " + artifact.namespacedKey());
+        Bukkit.getLogger().info("Registering artifact: " + artifact.namespacedKey());
         registeredArtifacts.put(artifact.namespacedKey(), artifact);
     }
 

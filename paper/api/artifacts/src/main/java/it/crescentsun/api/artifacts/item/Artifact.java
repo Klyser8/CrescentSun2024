@@ -1,6 +1,7 @@
 package it.crescentsun.api.artifacts.item;
 
 import it.crescentsun.api.artifacts.item.tooltip.*;
+import it.crescentsun.api.common.PluginNamespacedKeys;
 import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.api.crescentcore.sound.SoundEffect;
 import it.crescentsun.api.artifacts.event.ArtifactInteractEvent;
@@ -33,12 +34,12 @@ import static it.crescentsun.api.artifacts.item.tooltip.Tooltip.createHeader;
 public abstract class Artifact {
 
     // The NamespacedKey of the item's UUID. Used to identify unique items.
-    public static final NamespacedKey ITEM_INSTANCE_UUID = CrescentPlugin.id("uuid");
+    public static final NamespacedKey ITEM_INSTANCE_UUID = new NamespacedKey(PluginNamespacedKeys.NAMESPACE_CRESCENTCORE, "uuid");
     // The NamespacedKey of the item's key. Used to identify the item.
-    public static final NamespacedKey ARTIFACT_KEY = CrescentPlugin.id("artifact_key");
+    public static final NamespacedKey ARTIFACT_KEY = new NamespacedKey(PluginNamespacedKeys.NAMESPACE_CRESCENTCORE, "artifact_key");
     // The NamespacedKey of the item's Artifact Flags. Used set or fetch the item's flags.
-    public static final NamespacedKey ARTIFACT_FLAGS = CrescentPlugin.id("artifact_flags");
-    public static final NamespacedKey CURRENT_TOOLTIP_PAGE = CrescentPlugin.id("current_tooltip_page");
+    public static final NamespacedKey ARTIFACT_FLAGS = new NamespacedKey(PluginNamespacedKeys.NAMESPACE_CRESCENTCORE, "artifact_flags");
+    public static final NamespacedKey CURRENT_TOOLTIP_PAGE = new NamespacedKey(PluginNamespacedKeys.NAMESPACE_CRESCENTCORE, "current_tooltip_page");
     protected static MiniMessage miniMessage = MiniMessage.builder().postProcessor(TooltipStyle::disableItalic).build();
 
     protected Tooltip tooltip;
@@ -59,6 +60,14 @@ public abstract class Artifact {
         this.defaultMeta = defaultStack.getItemMeta().clone();
         this.tooltipStyle = tooltipStyle;
         createTooltip();
+        defaultMeta.getPersistentDataContainer().set(ARTIFACT_KEY, PersistentDataType.STRING,  namespacedKey.toString());
+        for (TooltipPage page : tooltip.getPages()) {
+            if (!page.getSections().isEmpty()) {
+                TooltipSection lastSection = page.getSections().getLast();
+                lastSection.addContentLine(tooltipStyle.getTertiaryHex() + "          [shift right-click for more]");
+            }
+        }
+
         if (defaultFlags == null || defaultFlags.length == 0) {
             this.defaultFlags = EnumSet.noneOf(ArtifactFlag.class);
             return;
@@ -66,10 +75,7 @@ public abstract class Artifact {
 
         this.defaultFlags = EnumSet.copyOf(Arrays.asList(defaultFlags));
         int[] flagIDs = this.defaultFlags.stream().mapToInt(ArtifactFlag::getId).toArray();
-        //If item is unique, add a UUID to the item's PersistentDataContainer.
-        defaultMeta.getPersistentDataContainer().set(ARTIFACT_KEY, PersistentDataType.STRING,  namespacedKey.toString());
         defaultMeta.getPersistentDataContainer().set(ARTIFACT_FLAGS, PersistentDataType.INTEGER_ARRAY, flagIDs);
-
         // Last page of the tooltip should be the one displaying the flags
         List<String> flagLines = getFlagLines();
         if (flagLines.isEmpty()) {
@@ -83,12 +89,6 @@ public abstract class Artifact {
                     .endSection()
                 .endPage()
             .build();
-        for (TooltipPage page : tooltip.getPages()) {
-            if (!page.getSections().isEmpty()) {
-                TooltipSection lastSection = page.getSections().getLast();
-                lastSection.addContentLine(tooltipStyle.getTertiaryHex() + "          [shift right-click for more]");
-            }
-        }
     }
 
     /**

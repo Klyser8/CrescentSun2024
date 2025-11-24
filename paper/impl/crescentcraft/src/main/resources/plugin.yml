@@ -8,6 +8,5 @@ description: $description
 depend:
   - crescent-core
   - artifacts
-  - lumenspawn
   - crystals
   - triumph-cmd

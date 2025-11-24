@@ -3,6 +3,7 @@ package it.crescentsun.api.crescentcore.util;
 import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.api.crescentcore.data.plugin.DatabaseTable;
 import it.crescentsun.api.crescentcore.data.plugin.PluginData;
+import org.bukkit.Bukkit;
 
 public class TableNameUtil {
 
@@ -14,7 +15,7 @@ public class TableNameUtil {
      */
     public static String appendPlayerDataTablePrefix(String pluginName) {
         if (pluginName.startsWith("player_data_")) {
-            CrescentPlugin.logger().warning("Plugin name " + pluginName + " already starts with 'player_data_'!");
+            Bukkit.getLogger().warning("Plugin name " + pluginName + " already starts with 'player_data_'!");
             new Exception().printStackTrace();
             return pluginName;
         }

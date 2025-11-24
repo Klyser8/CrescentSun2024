@@ -3,6 +3,7 @@ package it.crescentsun.api.artifacts.item.tooltip;
 import it.crescentsun.api.crescentcore.CrescentPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Bukkit;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +51,7 @@ public class TooltipPage {
         }
         // Count lines, if over limit then throw warning
         if (lore.size() > Tooltip.MAX_PAGE_LINES) {
-            CrescentPlugin.logger().warning("Created a tooltip page with more than  " + Tooltip.MAX_PAGE_LINES + " lines.");
+            Bukkit.getLogger().warning("Created a tooltip page with more than  " + Tooltip.MAX_PAGE_LINES + " lines.");
         }
         return lore;
     }

@@ -1,7 +1,6 @@
 description = "Plugin for miscellaneous features in the Crescent Sun SMP"
 
 dependencies {
-    implementation libs.lumenspawn.api
     compileOnly libs.artifacts.api
     compileOnly libs.crystals.api
     compileOnly libs.crescent.common

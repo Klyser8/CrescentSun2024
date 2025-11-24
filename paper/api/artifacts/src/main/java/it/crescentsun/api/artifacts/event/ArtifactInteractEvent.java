@@ -58,7 +58,7 @@ public class ArtifactInteractEvent extends ArtifactEvent implements Cancellable 
     /**
      * @return The hand the player used to interact with the artifact.
      */
-    @Nullable public EquipmentSlot getHand() {
+    public EquipmentSlot getHand() {
         return hand;
     }
 

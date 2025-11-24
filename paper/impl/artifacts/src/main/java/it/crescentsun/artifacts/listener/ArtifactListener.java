@@ -1,5 +1,6 @@
 package it.crescentsun.artifacts.listener;
 
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import it.crescentsun.api.artifacts.ArtifactProvider;
 import it.crescentsun.api.crescentcore.sound.SoundEffect;
 import it.crescentsun.api.crescentcore.util.ItemUtils;
@@ -12,6 +13,7 @@ import it.crescentsun.api.artifacts.item.Artifact;
 import it.crescentsun.api.artifacts.item.ArtifactFlag;
 import it.crescentsun.artifacts.event.ArtifactRegistrationEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -21,9 +23,7 @@ import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -55,19 +55,67 @@ public class ArtifactListener implements Listener {
 
         Action action = event.getAction();
         boolean isSneaking = player.isSneaking();
-        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(artifact, item, player, action, event.getHand());
+        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(artifact, item, player, action, event.getHand(), null, event.getClickedBlock());
         if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
             if (isSneaking) {
                 event.setCancelled(artifact.interactShiftRight(artifactInteractEvent));
+                artifactInteractEvent.callEvent();
             } else {
                 event.setCancelled(artifact.interactRight(artifactInteractEvent));
+                artifactInteractEvent.callEvent();
             }
         } else if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
             if (isSneaking) {
                 event.setCancelled(artifact.interactShiftLeft(artifactInteractEvent));
+                artifactInteractEvent.callEvent();
             } else {
                 event.setCancelled(artifact.interactLeft(artifactInteractEvent));
+                artifactInteractEvent.callEvent();
             }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = event.getPlayer().getInventory().getItem(event.getHand());
+        if (item.getType() == Material.AIR) {
+            return;
+        }
+        Artifact artifact = ArtifactUtil.identifyArtifact(item);
+        if (artifact == null) {
+            return;
+        }
+
+        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(artifact, item, player, Action.RIGHT_CLICK_AIR, event.getHand(), event.getRightClicked(), null);
+        if (player.isSneaking()) {
+            event.setCancelled(artifact.interactShiftRight(artifactInteractEvent));
+            artifactInteractEvent.callEvent();
+        } else {
+            event.setCancelled(artifact.interactRight(artifactInteractEvent));
+            artifactInteractEvent.callEvent();
+        }
+    }
+
+    @EventHandler
+    public void onPlayerAttackEntity(PrePlayerAttackEntityEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item.getType() == Material.AIR) {
+            return;
+        }
+        Artifact artifact = ArtifactUtil.identifyArtifact(item);
+        if (artifact == null) {
+            return;
+        }
+
+        ArtifactInteractEvent artifactInteractEvent = new ArtifactInteractEvent(artifact, item, player, Action.LEFT_CLICK_AIR, EquipmentSlot.HAND, event.getAttacked(), null);
+        if (player.isSneaking()) {
+            event.setCancelled(artifact.interactShiftLeft(artifactInteractEvent));
+            artifactInteractEvent.callEvent();
+        } else {
+            event.setCancelled(artifact.interactLeft(artifactInteractEvent));
+            artifactInteractEvent.callEvent();
         }
     }
 
@@ -119,6 +167,7 @@ public class ArtifactListener implements Listener {
             case CONTROL_DROP -> event.setCancelled(artifact.dropFull(artifactInventoryEvent));
             default -> {}
         }
+        artifactInventoryEvent.callEvent();
     }
 
     /**

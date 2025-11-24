@@ -1,6 +1,7 @@
 package it.crescentsun.crystals.vault;
 
 import it.crescentsun.api.common.DatabaseNamespacedKeys;
+import it.crescentsun.api.common.PluginNamespacedKeys;
 import it.crescentsun.api.crescentcore.data.DataType;
 import it.crescentsun.api.crescentcore.data.plugin.DatabaseColumn;
 import it.crescentsun.api.crescentcore.data.plugin.DatabaseTable;
@@ -49,7 +50,7 @@ public class VaultData extends PluginData {
     transient private VaultScheduledTask bukkitTask;
 
     /// The key used to identify vaults in the crescent sun network
-    public static final NamespacedKey VAULT_KEY = Crystals.id("vault");
+    public static final NamespacedKey VAULT_KEY = new NamespacedKey(PluginNamespacedKeys.NAMESPACE_CRYSTALS, ("vault"));
 
     public VaultData(Crystals plugin, UUID uuid, UUID ownerUuid, boolean isPublic, String server, Location location) {
         super();

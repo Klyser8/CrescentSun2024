@@ -1,6 +1,7 @@
 package it.crescentsun.api.artifacts.item.tooltip;
 
 import it.crescentsun.api.crescentcore.CrescentPlugin;
+import org.bukkit.Bukkit;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,7 @@ public class Tooltip {
      */
     public void addPage(TooltipPage page) {
         if (pages.size() >= MAX_PAGES) {
-            CrescentPlugin.logger().warning("Attempted to add more than " + MAX_PAGES + " pages to a tooltip.");
+            Bukkit.getLogger().warning("Attempted to add more than " + MAX_PAGES + " pages to a tooltip.");
             return;
         }
         pages.add(page);
@@ -68,7 +69,8 @@ public class Tooltip {
         // Construct the line with spaces
         String finalHeader = formattedLeftDashes + " " + formattedHeader + " " + formattedRightDashes;
         if (finalHeader.length() < MAX_LINE_LENGTH) {
-            CrescentPlugin.logger().warning("Created a tooltip header with length more than " + MAX_LINE_LENGTH + " characters: " + finalHeader);
+            // Don't give two fucks if I use the wrong logger here
+            Bukkit.getLogger().warning("Created a tooltip header with length more than " + MAX_LINE_LENGTH + " characters: " + finalHeader);
         }
         return finalHeader;
     }

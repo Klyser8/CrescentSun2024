@@ -30,12 +30,10 @@ public abstract class CrescentPlugin extends JavaPlugin {
     protected CrescentCoreAPI crescentCoreAPI;
     protected PlayerDataService playerDataService;
     protected PluginDataService pluginDataService;
-    private static Logger logger;
-    private static String pluginName;
+    private final Logger logger;
 
     public CrescentPlugin() {
         logger = getLogger();
-        pluginName = getName();
     }
 
     /**
@@ -169,17 +167,12 @@ public abstract class CrescentPlugin extends JavaPlugin {
      * @param key The key to create the namespaced key with.
      * @return The namespaced key.
      */
-    public static NamespacedKey id(String key) {
-        return new NamespacedKey(name(), key);
+    public NamespacedKey id(String key) {
+        return new NamespacedKey(this, key);
     }
 
     @NotNull
-    public static Logger logger() {
+    public Logger logger() {
         return logger;
-    }
-
-    @NotNull
-    public static String name() {
-        return pluginName;
     }
 }

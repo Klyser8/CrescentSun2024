@@ -58,8 +58,8 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
         explodeSound = new SoundEffect(plugin, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 2.0f, 1.2f);
     }
 
-    public void placeOrb(Player owner, Location location) {
-        prepareBlock(location, Material.DEAD_FIRE_CORAL_FAN);
+    public void placeOrb(Player owner, Location location, boolean wallPlacement, BlockFace facing) {
+        prepareBlock(location, Material.DEAD_FIRE_CORAL_FAN, wallPlacement, facing);
         placeSound.playAtLocation(location);
         ambientSound.playAtLocation(location);
         DetonationOrbData data = new DetonationOrbData(
@@ -166,6 +166,13 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
     }
 
     private void prepareBlock(Location location, Material material) {
+        BlockData blockData = location.getBlock().getBlockData();
+        boolean wallPlacement = blockData instanceof CoralWallFan;
+        BlockFace facing = wallPlacement ? ((CoralWallFan) blockData).getFacing() : null;
+        prepareBlock(location, material, wallPlacement, facing);
+    }
+
+    private void prepareBlock(Location location, Material material, boolean wallPlacement, BlockFace facing) {
         Runnable task = () -> {
             if (location.getWorld() == null) {
                 return;
@@ -184,6 +191,21 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
         } else {
             plugin.getServer().getScheduler().runTask(plugin, task);
         }
+    }
+
+    private Material resolveMaterial(Material material, boolean wallPlacement) {
+        if (!wallPlacement) {
+            return switch (material) {
+                case FIRE_CORAL_WALL_FAN -> Material.FIRE_CORAL_FAN;
+                case DEAD_FIRE_CORAL_WALL_FAN -> Material.DEAD_FIRE_CORAL_FAN;
+                default -> material;
+            };
+        }
+        return switch (material) {
+            case FIRE_CORAL_FAN -> Material.FIRE_CORAL_WALL_FAN;
+            case DEAD_FIRE_CORAL_FAN -> Material.DEAD_FIRE_CORAL_WALL_FAN;
+            default -> material;
+        };
     }
 
     private void removeOrbBlock(Location location) {

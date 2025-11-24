@@ -60,11 +60,13 @@ public abstract class Artifact {
         this.defaultMeta = defaultStack.getItemMeta().clone();
         this.tooltipStyle = tooltipStyle;
         createTooltip();
-        defaultMeta.getPersistentDataContainer().set(ARTIFACT_KEY, PersistentDataType.STRING,  namespacedKey.toString());
-        for (TooltipPage page : tooltip.getPages()) {
-            if (!page.getSections().isEmpty()) {
-                TooltipSection lastSection = page.getSections().getLast();
-                lastSection.addContentLine(tooltipStyle.getTertiaryHex() + "          [shift right-click for more]");
+        defaultMeta.getPersistentDataContainer().set(ARTIFACT_KEY, PersistentDataType.STRING, namespacedKey.toString());
+        if (tooltip != null && tooltip.getPages().size() > 1) {
+            for (TooltipPage page : tooltip.getPages()) {
+                if (!page.getSections().isEmpty()) {
+                    TooltipSection lastSection = page.getSections().getLast();
+                    lastSection.addContentLine(tooltipStyle.getTertiaryHex() + "          [shift right-click for more]");
+                }
             }
         }
 
@@ -126,6 +128,15 @@ public abstract class Artifact {
         }
         ItemStack clone = defaultStack.clone();
         ItemMeta clonedMeta = defaultMeta.clone();
+
+        // Ensure the core artifact data is always present on the created stack
+        PersistentDataContainer data = clonedMeta.getPersistentDataContainer();
+        data.set(ARTIFACT_KEY, PersistentDataType.STRING, namespacedKey.toString());
+        if (!defaultFlags.isEmpty()) {
+            int[] flagIDs = this.defaultFlags.stream().mapToInt(ArtifactFlag::getId).toArray();
+            data.set(ARTIFACT_FLAGS, PersistentDataType.INTEGER_ARRAY, flagIDs);
+        }
+
 
         if (hasFlag(ArtifactFlag.UNIQUE)) {
             clonedMeta.getPersistentDataContainer().set(ITEM_INSTANCE_UUID, PersistentDataType.STRING, UUID.randomUUID().toString());

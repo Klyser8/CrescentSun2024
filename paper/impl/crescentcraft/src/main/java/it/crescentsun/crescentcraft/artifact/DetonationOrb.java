@@ -11,6 +11,7 @@ import it.crescentsun.api.crescentcore.sound.CompositeSoundEffect;
 import it.crescentsun.api.crescentcore.sound.SoundEffect;
 import org.bukkit.*;
 import org.bukkit.block.data.Waterlogged;
+import org.bukkit.block.data.type.CoralWallFan;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -83,17 +84,17 @@ public class DetonationOrb extends Artifact {
         if (event.getClickedBlock() == null) {
             return false;
         }
-        Location clickLoc = event.getClickedBlock().getLocation();
-        World world = clickLoc.getWorld();
-        placeSound.playAtLocation(clickLoc);
-        ambientSound.playAtLocation(clickLoc);
-        clickLoc.getBlock().setType(Material.DEAD_FIRE_CORAL_FAN);
-        Waterlogged blockData = ((Waterlogged) clickLoc.getBlock().getBlockData());
+        Location orbLoc = event.getClickedBlock().getLocation().clone().add(0, 1, 0);
+        placeSound.playAtLocation(orbLoc);
+        ambientSound.playAtLocation(orbLoc);
+        orbLoc.getBlock().setType(Material.DEAD_FIRE_CORAL_FAN);
+        CoralWallFan blockData = ((CoralWallFan) orbLoc.getBlock().getBlockData());
         blockData.setWaterlogged(false);
-        clickLoc.getBlock().setBlockData(blockData);
+        orbLoc.getBlock().setBlockData(blockData);
         Player player = event.getPlayer();
         PlayerInventory inventory = player.getInventory();
         inventory.getItem(event.getHand()).setAmount(inventory.getItem(event.getHand()).getAmount() - 1);
+        new DetonationOrbRunnable(player, orbLoc).runTaskTimer(plugin, 0L, 4L);
         return true;
     }
 
@@ -103,7 +104,7 @@ public class DetonationOrb extends Artifact {
         private final Location location;
         private final World world;
 
-        int clock = -1;
+        int clock = 0;
 
         public DetonationOrbRunnable(Player owner, Location location) {
             this.owner = owner;
@@ -116,7 +117,7 @@ public class DetonationOrb extends Artifact {
             clock++;
             playLavaParticles();
             readyTrap();
-            if (clock > 40) {
+            if (clock > 10) {
 
                 playFlameParticles();
                 playAmbientFire();
@@ -129,14 +130,14 @@ public class DetonationOrb extends Artifact {
         }
 
         private void playLavaParticles() {            //Play lava particles every 0.25 seconds, before the trap is ready
-            if (clock % 5 == 0 && clock < 40) {
-                world.spawnParticle(Particle.LAVA, location, 1,
+            if (clock < 10) {
+                world.spawnParticle(Particle.LAVA, location.clone().add(0.5, 0, 0.5), 3,
                         0, 0, 0, 0, null, true);
             }
         }
 
         private void readyTrap() {                                //Ready the trap. Make sounds effects and change block
-            if (clock == 40) {
+            if (clock == 10) {
                 location.getBlock().setType(Material.FIRE_CORAL_FAN);
                 Waterlogged blockData = ((Waterlogged) location.getBlock().getBlockData());
                 blockData.setWaterlogged(false);
@@ -146,14 +147,12 @@ public class DetonationOrb extends Artifact {
         }
 
         private void playFlameParticles() {                                  //Every 0.1 seconds, spawn a flame particle
-            if (clock % 2 == 0) {
-                world.spawnParticle(Particle.FLAME, location, 1,
-                        0.25, 0.1, 0.25, 0, null, true);
-            }
+            world.spawnParticle(Particle.FLAME, location.clone().add(0.5, 0, 0.5), 3,
+                    0.25, 0.1, 0.25, 0, null, true);
         }
 
         private void playAmbientFire() {                                      //Every 4 seconds, play ambient fire sound
-            if (clock % 80 == 0) {
+            if (clock % plugin.random().nextInt(10) == 0) {
                 ambientSound.playAtLocation(location);
             }
         }
@@ -171,11 +170,11 @@ public class DetonationOrb extends Artifact {
 
         private void triggerTrap(List<LivingEntity> nearbyEntities) {          //If an entity is found, trigger the trap
             explodeSound.playAtLocation(location);
-            world.spawnParticle(Particle.LAVA, location, 10,
+            world.spawnParticle(Particle.LAVA, location.clone().add(0.5, 0, 0.5), 10,
                     1, 1, 1, 0, null, true);
-            world.spawnParticle(Particle.EXPLOSION, location,
+            world.spawnParticle(Particle.EXPLOSION, location.clone().add(0.5, 0, 0.5),
                     5, 1, 1, 1, 0, null, true);
-            world.spawnParticle(Particle.FLAME, location, 25,
+            world.spawnParticle(Particle.FLAME, location.clone().add(0.5, 0, 0.5), 25,
                     1, 1, 1, 0.25, null, true);
             //Damage and knock entities away.
             for (LivingEntity entity : nearbyEntities) {

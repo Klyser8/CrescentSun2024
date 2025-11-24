@@ -75,7 +75,7 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
     }
 
     public void startOrbTask(DetonationOrbData data) {
-        new DetonationOrbRunnable(data).runTaskTimer(plugin, 0L, 4L);
+        plugin.getServer().getScheduler().runTask(plugin, () -> new DetonationOrbRunnable(data).runTaskTimer(plugin, 0L, 4L));
     }
 
     @EventHandler
@@ -128,15 +128,28 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
     }
 
     private void prepareBlock(Location location, Material material) {
-        location.getBlock().setType(material);
-        Waterlogged blockData = ((Waterlogged) location.getBlock().getBlockData());
-        blockData.setWaterlogged(false);
-        location.getBlock().setBlockData(blockData);
+        Runnable task = () -> {
+            location.getBlock().setType(material);
+            CoralWallFan blockData = ((CoralWallFan) location.getBlock().getBlockData());
+            blockData.setWaterlogged(false);
+            location.getBlock().setBlockData(blockData);
+        };
+        if (Bukkit.isPrimaryThread()) {
+            task.run();
+        } else {
+            plugin.getServer().getScheduler().runTask(plugin, task);
+        }
     }
 
     private void removeOrbBlock(Location location) {
-        if (location.getWorld() != null) {
-            location.getBlock().setType(Material.AIR);
+        if (location.getWorld() == null) {
+            return;
+        }
+        Runnable task = () -> location.getBlock().setType(Material.AIR);
+        if (Bukkit.isPrimaryThread()) {
+            task.run();
+        } else {
+            plugin.getServer().getScheduler().runTask(plugin, task);
         }
     }
 

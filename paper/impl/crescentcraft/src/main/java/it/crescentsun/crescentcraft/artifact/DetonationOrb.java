@@ -68,13 +68,12 @@ public class DetonationOrb extends Artifact {
             return false;
         }
         Block clickedBlock = event.getClickedBlock();
-        BlockFace clickedFace = event.getClickedBlockFace();
 
         if (isUnderwater(clickedBlock)) {
             return false;
         }
 
-        PlacementResult placement = resolvePlacement(clickedBlock, clickedFace);
+        PlacementResult placement = resolvePlacement(clickedBlock);
         if (!placement.canPlace()) {
             return false;
         }
@@ -87,30 +86,17 @@ public class DetonationOrb extends Artifact {
         }
 
         itemInHand.setAmount(itemInHand.getAmount() - 1);
-        ((CrescentCraft) plugin).getDetonationOrbManager()
-                .placeOrb(player, placement.location(), placement.wallPlacement(), placement.facing());
+        ((CrescentCraft) plugin).getDetonationOrbManager().placeOrb(player, placement.location());
         return true;
     }
 
-    private PlacementResult resolvePlacement(Block clickedBlock, BlockFace clickedFace) {
+    private PlacementResult resolvePlacement(Block clickedBlock) {
         if (clickedBlock == null) {
             return PlacementResult.failed();
         }
 
         boolean clickedReplaceable = isReplaceable(clickedBlock);
-        boolean wallPlacement = false;
-        Block targetBlock;
-
-        if (clickedReplaceable) {
-            targetBlock = clickedBlock;
-        } else if (clickedFace == BlockFace.UP || clickedFace == null) {
-            targetBlock = clickedBlock.getRelative(BlockFace.UP);
-        } else if (clickedFace == BlockFace.DOWN) {
-            targetBlock = clickedBlock.getRelative(BlockFace.DOWN);
-        } else {
-            targetBlock = clickedBlock.getRelative(clickedFace);
-            wallPlacement = true;
-        }
+        Block targetBlock = clickedReplaceable ? clickedBlock : clickedBlock.getRelative(BlockFace.UP);
 
         if (isUnderwater(targetBlock)) {
             return PlacementResult.failed();
@@ -124,8 +110,7 @@ public class DetonationOrb extends Artifact {
             return PlacementResult.failed();
         }
 
-        BlockFace facing = wallPlacement && clickedFace != null ? clickedFace.getOppositeFace() : null;
-        return PlacementResult.success(targetBlock.getLocation(), wallPlacement, facing);
+        return PlacementResult.success(targetBlock.getLocation());
     }
 
     private boolean hasSupport(Block targetBlock) {
@@ -152,13 +137,13 @@ public class DetonationOrb extends Artifact {
         return block.isPassable() && !isUnderwater(block);
     }
 
-    private record PlacementResult(boolean canPlace, Location location, boolean wallPlacement, BlockFace facing) {
+    private record PlacementResult(boolean canPlace, Location location) {
         static PlacementResult failed() {
-            return new PlacementResult(false, null, false, null);
+            return new PlacementResult(false, null);
         }
 
-        static PlacementResult success(Location location, boolean wallPlacement, BlockFace facing) {
-            return new PlacementResult(true, location, wallPlacement, facing);
+        static PlacementResult success(Location location) {
+            return new PlacementResult(true, location);
         }
     }
 }

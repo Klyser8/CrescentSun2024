@@ -11,7 +11,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.block.DecoratedPot;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Player;
 
 @Command(value = "crystals", alias = "cr")
@@ -48,5 +50,17 @@ public class CrystalsCommands {
         plugin.getCrystalsService().spawnCrystals(player, amount, CrystalSource.COMMAND, animation, player.getLocation());
         TextComponent textComponent = MessageFormatter.formatCommandMessage(MessageType.SUCCESS, "You've spawned " + amount + " Crystal(s) with the " + animation + " animation.");
         player.sendMessage(textComponent);
+    }
+
+    @Permission("crescent.crystals.pot")
+    @Command("pot")
+    public void potCommand(CommandSender sender) {
+        // Summon an invisible armor stand, being ridden by a decorated pot.
+        if (!(sender instanceof Player player)) {
+            TextComponent textComponent = MessageFormatter.formatCommandMessage(MessageType.INCORRECT, "Only players can use this command.");
+            sender.sendMessage(textComponent);
+            return;
+        }
+
     }
 }

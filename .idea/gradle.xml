@@ -15,13 +15,16 @@
             <option value="$PROJECT_DIR$/paper/api/crescent-common" />
             <option value="$PROJECT_DIR$/paper/api/crescent-core" />
             <option value="$PROJECT_DIR$/paper/api/crystals" />
+            <option value="$PROJECT_DIR$/paper/api/lumenspawn" />
             <option value="$PROJECT_DIR$/paper/impl" />
             <option value="$PROJECT_DIR$/paper/impl/artifacts" />
             <option value="$PROJECT_DIR$/paper/impl/command-tomes" />
             <option value="$PROJECT_DIR$/paper/impl/crescent-core" />
+            <option value="$PROJECT_DIR$/paper/impl/crescentcraft" />
             <option value="$PROJECT_DIR$/paper/impl/crystals" />
             <option value="$PROJECT_DIR$/paper/impl/dropnames" />
             <option value="$PROJECT_DIR$/paper/impl/jumpwarps" />
+            <option value="$PROJECT_DIR$/paper/impl/lumenspawn" />
             <option value="$PROJECT_DIR$/paper/impl/mob-madness" />
             <option value="$PROJECT_DIR$/paper/impl/triumph-cmd" />
             <option value="$PROJECT_DIR$/velocity" />

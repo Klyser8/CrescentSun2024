@@ -9,12 +9,14 @@ var apiVersion = project.findProperty('apiVersion')?.toDouble()
 description = "Implementation parent module"
 
 def crescentcore_version = project.findProperty('crescentcore_version')
-def jumpwarps_version = project.findProperty('jumpwarps_version')
 def artifacts_version = project.findProperty('artifacts_version')
 def crystals_version = project.findProperty('crystals_version')
-def dropnames_version = project.findProperty('dropnames_version')
-def commandtomes_version = project.findProperty('commandtomes_version')
+def lumenspawn_version = project.findProperty('lumenspawn_version')
 def triumphcmd_version = project.findProperty('triumphcmd_version')
+def jumpwarps_version = project.findProperty('jumpwarps_version')
+def commandtomes_version = project.findProperty('commandtomes_version')
+def dropnames_version = project.findProperty('dropnames_version')
+def crescentcraft_version = project.findProperty('crescentcraft_version')
 
 void addRepositories(Project project) {
     project.repositories {
@@ -40,13 +42,15 @@ subprojects {
     }
 
     project.version = [
-            "crescent-core"            : crescentcore_version,
-            "jumpwarps"                 : jumpwarps_version,
-            "artifacts"                     : artifacts_version,
+            "crescent-core"           : crescentcore_version,
+            "artifacts"                      : artifacts_version,
             "crystals"                      : crystals_version,
+            "lumenspawn"              : lumenspawn_version,
+            "triumph-cmd"             : triumphcmd_version,
             "dropnames"                : dropnames_version,
             "command-tomes"      : commandtomes_version,
-            "triumph-cmd"             : triumphcmd_version
+            "jumpwarps"                 : jumpwarps_version,
+            "crescentcraft"             : crescentcraft_version
     ].get(project.name)
     project.group = "it.crescentsun"
     project.description = project.description ?: "No description provided"

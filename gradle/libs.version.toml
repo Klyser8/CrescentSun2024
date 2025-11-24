@@ -10,6 +10,7 @@ crescent-common = "1.0.6"
 artifacts-api = "1.0.22"
 crystals-api = "1.0.10"
 triumphcmd = "1.0.0"
+lumenspawn-api = "1.0.0"
 
 # Other dependencies
 hikari-cp = "7.0.2"
@@ -38,6 +39,7 @@ crescent-common = { module = "it.crescentsun.api:crescent-common", version.ref =
 triumphcmd = { module = "it.crescentsun:triumph-cmd", version.ref = "triumphcmd"}
 artifacts-api = { module = "it.crescentsun.api:artifacts", version.ref = "artifacts-api"}
 crystals-api = { module = "it.crescentsun.api:crystals", version.ref = "crystals-api"}
+lumenspawn-api = { module = "it.crescentsun.api:lumenspawn", version.ref = "lumenspawn-api"}
 
 # Test
 

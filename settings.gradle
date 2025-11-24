@@ -30,13 +30,15 @@ include("paper:impl:crescent-core")
 findProject(":impl:crescent-core")?.name = "crescent-core-impl"
 
 include 'paper:impl:crescent-core'
-include 'paper:impl:jumpwarps'
 include 'paper:impl:artifacts'
-include 'paper:impl:command-tomes'
 include 'paper:impl:crystals'
-include 'paper:impl:dropnames'
+include 'paper:impl:lumenspawn'
 include 'paper:impl:mob-madness'
 include 'paper:impl:triumph-cmd'
+include 'paper:impl:command-tomes'
+include 'paper:impl:jumpwarps'
+include 'paper:impl:dropnames'
+include 'paper:impl:crescentcraft'
 
 
 // APIs
@@ -50,6 +52,7 @@ include 'paper:api:crescent-common'
 include 'paper:api:artifacts'
 include 'paper:api:crystals'
 findProject('paper:api:crystals')?.name = 'crystals'
+include 'paper:api:lumenspawn'
 
 // Velocity
 include 'velocity'

@@ -1,0 +1,12 @@
+name: $name
+version: $version
+main: it.crescentsun.lumenspawn.LumenSpawnMain
+api-version: $apiVersion
+authors:
+  - $author
+description: $description
+depend:
+  - crescent-core
+  - artifacts
+  - triumph-cmd
+  - crystals

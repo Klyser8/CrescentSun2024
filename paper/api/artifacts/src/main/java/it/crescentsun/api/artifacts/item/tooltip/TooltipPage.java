@@ -35,13 +35,14 @@ public class TooltipPage {
      * Assembles the lore components for the tooltip page, including sections and the pagination hint.
      *
      * @param miniMessage the MiniMessage instance used to deserialize text
+     * @param tooltipStyle the TooltipStyle used to apply highlighting
      * @return a list of components representing the lore
      */
-    public List<Component> assembleLore(MiniMessage miniMessage) {
+    public List<Component> assembleLore(MiniMessage miniMessage, TooltipStyle tooltipStyle) {
         List<Component> lore = new ArrayList<>();
         for (TooltipSection section : sections) {
             lore.add(section.getHeader(miniMessage));
-            lore.addAll(section.getContent(miniMessage));
+            lore.addAll(section.getContent(miniMessage, tooltipStyle));
         }
         if (paginationHintText != null) {
             lore.add(Component.empty()); // Empty line before hint

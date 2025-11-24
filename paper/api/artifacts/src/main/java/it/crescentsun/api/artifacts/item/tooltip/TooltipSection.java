@@ -48,10 +48,10 @@ public class TooltipSection {
      * @param miniMessage the MiniMessage instance used to deserialize the content texts
      * @return a list of content components
      */
-    public List<Component> getContent(MiniMessage miniMessage) {
+    public List<Component> getContent(MiniMessage miniMessage, TooltipStyle tooltipStyle) {
         List<Component> components = new ArrayList<>();
         for (String text : contentTexts) {
-            components.add(miniMessage.deserialize(text));
+            components.add(miniMessage.deserialize(tooltipStyle.applyHighlighting(text)));
         }
         return components;
     }

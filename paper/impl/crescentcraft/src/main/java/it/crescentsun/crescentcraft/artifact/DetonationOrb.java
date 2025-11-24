@@ -1,5 +1,6 @@
 package it.crescentsun.crescentcraft.artifact;
 
+import it.crescentsun.api.artifacts.event.ArtifactInteractEvent;
 import it.crescentsun.api.artifacts.item.Artifact;
 import it.crescentsun.api.artifacts.item.ArtifactFlag;
 import it.crescentsun.api.artifacts.item.tooltip.TooltipBuilder;
@@ -42,6 +43,8 @@ public class DetonationOrb extends Artifact {
                 new SoundEffect(plugin, Sound.ITEM_BUCKET_FILL_LAVA, SoundCategory.PLAYERS, 0.75f, 1.2f));
         ambientSound = new SoundEffect(plugin, Sound.BLOCK_FIRE_AMBIENT, SoundCategory.AMBIENT, 0.6f, 1.45f);
         explodeSound = new SoundEffect(plugin, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 2.0f, 1.2f);
+
+        defaultMeta.setMaxStackSize(16);
     }
 
     @Override
@@ -60,8 +63,16 @@ public class DetonationOrb extends Artifact {
                 .endPage()
                 .page()
                     .section(createHeader("STATS", tooltipStyle.getHeaderHex2()))
-                        .addLine(tooltipStyle.getPrimaryHex2() + "Radius: " + RADIUS + " blocks")
-                        .addLine(tooltipStyle.getPrimaryHex2() + "Damage: " + DAMAGE + " HP")
-                        .addLine(tooltipStyle.getPrimaryHex2() + "Fire Duration: " + (FIRE_TICKS / 20) + " seconds")
+                        .addLine(tooltipStyle.getPrimaryHex2() + "Radius: {" + RADIUS + "} blocks")
+                        .addLine(tooltipStyle.getPrimaryHex2() + "Damage: {" + DAMAGE + "} HP")
+                        .addLine(tooltipStyle.getPrimaryHex2() + "Fire Duration: {" + (FIRE_TICKS / 20) + "} seconds")
+                    .endSection()
+                .endPage()
+            .build();
+    }
+
+    @Override
+    public boolean interactRight(ArtifactInteractEvent event) {
+        event.get
     }
 }

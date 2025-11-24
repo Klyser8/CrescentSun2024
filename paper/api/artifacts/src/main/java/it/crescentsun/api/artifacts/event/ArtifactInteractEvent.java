@@ -1,6 +1,8 @@
 package it.crescentsun.api.artifacts.event;
 
 import it.crescentsun.api.artifacts.item.Artifact;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
@@ -25,12 +27,16 @@ public class ArtifactInteractEvent extends ArtifactEvent implements Cancellable 
     // Hand
     private final EquipmentSlot hand;
     private boolean cancelled;
+    @Nullable private final Entity clickedEntity;
+    @Nullable private final Block clickedBlock;
 
     public ArtifactInteractEvent(Artifact artifact,
                                  ItemStack artifactStack,
                                  @NotNull Player who,
                                  Action action,
-                                 EquipmentSlot hand) {
+                                 EquipmentSlot hand,
+                                 @Nullable Entity clickedEntity,
+                                 @Nullable Block clickedBlock) {
         super(artifact, artifactStack);
         this.action = action;
         if (hand != null && hand != EquipmentSlot.HAND && hand != EquipmentSlot.OFF_HAND) {
@@ -38,6 +44,8 @@ public class ArtifactInteractEvent extends ArtifactEvent implements Cancellable 
         }
         this.hand = hand;
         this.who = who;
+        this.clickedEntity = clickedEntity;
+        this.clickedBlock = clickedBlock;
     }
 
     /**
@@ -59,6 +67,20 @@ public class ArtifactInteractEvent extends ArtifactEvent implements Cancellable 
      */
     public Player getPlayer() {
         return who;
+    }
+
+    /**
+     * @return The entity that was clicked, or null if none.
+     */
+    public @Nullable Entity getClickedEntity() {
+        return clickedEntity;
+    }
+
+    /**
+     * @return The block that was clicked, or null if none.
+     */
+    public @Nullable Block getClickedBlock() {
+        return clickedBlock;
     }
 
     @Override

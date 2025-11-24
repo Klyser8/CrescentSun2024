@@ -140,7 +140,7 @@ public abstract class Artifact {
         clonedMeta.displayName(displayName);
         if (tooltip != null && !tooltip.getPages().isEmpty()) {
             TooltipPage firstPage = tooltip.getPages().getFirst();
-            clonedMeta.lore(firstPage.assembleLore(miniMessage));
+            clonedMeta.lore(firstPage.assembleLore(miniMessage, tooltipStyle));
             clonedMeta.getPersistentDataContainer().set(CURRENT_TOOLTIP_PAGE, PersistentDataType.INTEGER, 0);
         }
         clone.setItemMeta(clonedMeta);
@@ -272,7 +272,7 @@ public abstract class Artifact {
             int pageIndex = data.getOrDefault(CURRENT_TOOLTIP_PAGE, PersistentDataType.INTEGER, 0);
             pageIndex = (pageIndex + 1) % artifact.getTooltip().getPages().size();
             TooltipPage page = artifact.getTooltip().getPages().get(pageIndex);
-            meta.lore(page.assembleLore(miniMessage));
+            meta.lore(page.assembleLore(miniMessage, tooltipStyle));
             data.set(CURRENT_TOOLTIP_PAGE, PersistentDataType.INTEGER, pageIndex);
             item.setItemMeta(meta);
             return true;

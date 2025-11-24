@@ -40,6 +40,9 @@ public class TooltipStyle {
     private final String secondaryHex1;
     private final String secondaryHex2;
     private final String secondaryHex3;
+    private final String highlightHex1;
+    private final String highlightHex2;
+    private final String highlightHex3;
     private final String tertiaryHex;
 
     /**
@@ -74,6 +77,11 @@ public class TooltipStyle {
         this.headerHex3 = headerHex3;
         this.primaryHex3 = primaryHex3;
         this.secondaryHex3 = secondaryHex3;
+
+        this.highlightHex1 = highlightHex1;
+        this.highlightHex2 = highlightHex2;
+        this.highlightHex3 = highlightHex3;
+
 
         this.tertiaryHex = tertiaryHex;
     }
@@ -165,7 +173,7 @@ public class TooltipStyle {
      * @return the first highlight color code
      */
     public String getHighlightHex1() {
-        return "<" + primaryHex1 + ">";
+        return "<" + highlightHex1 + ">";
     }
 
     /**
@@ -174,7 +182,7 @@ public class TooltipStyle {
      * @return the second highlight color code
      */
     public String getHighlightHex2() {
-        return "<" + primaryHex2 + ">";
+        return "<" + highlightHex2 + ">";
     }
 
     /**
@@ -183,7 +191,79 @@ public class TooltipStyle {
      * @return the third highlight color code
      */
     public String getHighlightHex3() {
-        return "<" + primaryHex3 + ">";
+        return "<" + highlightHex3 + ">";
+    }
+
+    /**
+     * Applies highlight formatting to any text wrapped in curly braces. The highlight color used will
+     * be inferred from the primary/secondary/header color present in the line, falling back to the
+     * first highlight color if no base color can be detected.
+     *
+     * @param text the text to process for highlights
+     * @return the processed text with highlight colors applied
+     */
+    public String applyHighlighting(String text) {
+        if (!text.contains("{") || !text.contains("}")) {
+            return text;
+        }
+
+        String baseColor = findBaseColor(text);
+        String highlightColor = findHighlightColor(baseColor);
+
+        if (highlightColor == null) {
+            return text;
+        }
+
+        String highlightClosingTag = getClosingTag(highlightColor);
+        String resetColor = baseColor != null ? baseColor : "";
+
+        return text.replaceAll("\\{([^{}]+)}", highlightColor + "$1" + highlightClosingTag + resetColor);
+    }
+
+    private String findBaseColor(String text) {
+        String[] orderedColors = new String[]{
+                getPrimaryHex1(), getSecondaryHex1(), getHeaderHex1(),
+                getPrimaryHex2(), getSecondaryHex2(), getHeaderHex2(),
+                getPrimaryHex3(), getSecondaryHex3(), getHeaderHex3()
+        };
+
+        for (String color : orderedColors) {
+            if (text.contains(color)) {
+                return color;
+            }
+        }
+
+        return null;
+    }
+
+    private String findHighlightColor(String baseColor) {
+        if (baseColor == null) {
+            return getHighlightHex1();
+        }
+
+        if (baseColor.equals(getPrimaryHex1()) || baseColor.equals(getSecondaryHex1()) || baseColor.equals(getHeaderHex1())) {
+            return getHighlightHex1();
+        }
+        if (baseColor.equals(getPrimaryHex2()) || baseColor.equals(getSecondaryHex2()) || baseColor.equals(getHeaderHex2())) {
+            return getHighlightHex2();
+        }
+        if (baseColor.equals(getPrimaryHex3()) || baseColor.equals(getSecondaryHex3()) || baseColor.equals(getHeaderHex3())) {
+            return getHighlightHex3();
+        }
+
+        return null;
+    }
+
+    private String getClosingTag(String openingTag) {
+        int tagStart = openingTag.indexOf('<');
+        int tagEnd = openingTag.indexOf('>');
+        if (tagStart != -1 && tagEnd != -1) {
+            String tagContent = openingTag.substring(tagStart + 1, tagEnd);
+            int colonIndex = tagContent.indexOf(':');
+            String tagName = (colonIndex != -1) ? tagContent.substring(0, colonIndex) : tagContent;
+            return "</" + tagName + ">";
+        }
+        return "";
     }
 
     /**

@@ -18,7 +18,7 @@ import static it.crescentsun.api.artifacts.item.tooltip.Tooltip.createHeader;
 
 public class DetonationOrb extends Artifact {
 
-    public static final int RADIUS = 2;
+    public static final float RADIUS = 1.25f;
     public static final int DAMAGE = 20;
     public static final int FIRE_TICKS = 160;
 

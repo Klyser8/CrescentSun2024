@@ -9,6 +9,9 @@ import it.crescentsun.api.crescentcore.sound.CompositeSoundEffect;
 import it.crescentsun.api.crescentcore.sound.SoundEffect;
 import it.crescentsun.crescentcraft.CrescentCraft;
 import it.crescentsun.crescentcraft.artifact.data.DetonationOrbData;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.block.data.type.CoralWallFan;
@@ -23,6 +26,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
+import java.awt.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,20 +121,28 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
 
     private void notifyOwner(DetonationOrbData data) {
         UUID worldId = data.getWorldUuid();
-        String message = ChatColor.YELLOW + "The Detonation Orb found at " + data.getX() + ", " +
-                data.getY() + ", " + data.getZ() + " Wilted! It will no longer work.";
+        // Message to notify owner that the orb wilted. Gray, "Detonation Orb" in red, should state the coordinates of where the orb was.
+        TextComponent notification = Component.text()
+                .append(Component.text("Your ", NamedTextColor.GRAY))
+                .append(Component.text("Detonation Orb", NamedTextColor.RED))
+                .append(Component.text(" at ", NamedTextColor.GRAY))
+                .append(Component.text(
+                        String.format("(%d, %d, %d)", data.getX(), data.getY(), data.getZ()),
+                        NamedTextColor.YELLOW))
+                .append(Component.text(" has wilted and will not detonate.", NamedTextColor.GRAY))
+                .build();
         Player owner = plugin.getServer().getPlayer(data.getOwnerUuid());
         if (owner != null && owner.getWorld().getUID().equals(worldId)) {
-            owner.sendMessage(message);
+            owner.sendMessage(notification);
         } else {
-            pendingNotifications.put(data.getOwnerUuid(), new PendingNotification(worldId, message));
+            pendingNotifications.put(data.getOwnerUuid(), new PendingNotification(worldId, notification));
         }
     }
 
     private void prepareBlock(Location location, Material material) {
         Runnable task = () -> {
             location.getBlock().setType(material);
-            CoralWallFan blockData = ((CoralWallFan) location.getBlock().getBlockData());
+            Waterlogged blockData = ((Waterlogged) location.getBlock().getBlockData());
             blockData.setWaterlogged(false);
             location.getBlock().setBlockData(blockData);
         };
@@ -254,5 +266,5 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
         }
     }
 
-    private record PendingNotification(UUID worldId, String message) { }
+    private record PendingNotification(UUID worldId, TextComponent message) { }
 }

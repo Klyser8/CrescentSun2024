@@ -73,7 +73,7 @@ public class DetonationOrb extends Artifact {
             return false;
         }
 
-        PlacementResult placement = resolvePlacement(clickedBlock);
+        PlacementResult placement = resolvePlacement(clickedBlock, event.getClickedBlockFace());
         if (!placement.canPlace()) {
             return false;
         }
@@ -90,13 +90,14 @@ public class DetonationOrb extends Artifact {
         return true;
     }
 
-    private PlacementResult resolvePlacement(Block clickedBlock) {
+    private PlacementResult resolvePlacement(Block clickedBlock, BlockFace clickedFace) {
         if (clickedBlock == null) {
             return PlacementResult.failed();
         }
 
+        BlockFace targetFace = clickedFace != null ? clickedFace : BlockFace.UP;
         boolean clickedReplaceable = isReplaceable(clickedBlock);
-        Block targetBlock = clickedReplaceable ? clickedBlock : clickedBlock.getRelative(BlockFace.UP);
+        Block targetBlock = clickedReplaceable ? clickedBlock : clickedBlock.getRelative(targetFace);
 
         if (isUnderwater(targetBlock)) {
             return PlacementResult.failed();

@@ -10,6 +10,9 @@ import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.crescentcraft.CrescentCraft;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Waterlogged;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -64,11 +67,83 @@ public class DetonationOrb extends Artifact {
         if (event.getClickedBlock() == null) {
             return false;
         }
-        Location orbLoc = event.getClickedBlock().getLocation().clone().add(0, 1, 0);
+        Block clickedBlock = event.getClickedBlock();
+
+        if (isUnderwater(clickedBlock)) {
+            return false;
+        }
+
+        PlacementResult placement = resolvePlacement(clickedBlock);
+        if (!placement.canPlace()) {
+            return false;
+        }
+
         Player player = event.getPlayer();
         PlayerInventory inventory = player.getInventory();
-        inventory.getItem(event.getHand()).setAmount(inventory.getItem(event.getHand()).getAmount() - 1);
-        ((CrescentCraft) plugin).getDetonationOrbManager().placeOrb(player, orbLoc);
+        ItemStack itemInHand = inventory.getItem(event.getHand());
+        if (itemInHand == null) {
+            return false;
+        }
+
+        itemInHand.setAmount(itemInHand.getAmount() - 1);
+        ((CrescentCraft) plugin).getDetonationOrbManager().placeOrb(player, placement.location());
         return true;
+    }
+
+    private PlacementResult resolvePlacement(Block clickedBlock) {
+        if (clickedBlock == null) {
+            return PlacementResult.failed();
+        }
+
+        boolean clickedReplaceable = isReplaceable(clickedBlock);
+        Block targetBlock = clickedReplaceable ? clickedBlock : clickedBlock.getRelative(BlockFace.UP);
+
+        if (isUnderwater(targetBlock)) {
+            return PlacementResult.failed();
+        }
+
+        if (!(targetBlock.isEmpty() || isReplaceable(targetBlock))) {
+            return PlacementResult.failed();
+        }
+
+        if (!hasSupport(targetBlock)) {
+            return PlacementResult.failed();
+        }
+
+        return PlacementResult.success(targetBlock.getLocation());
+    }
+
+    private boolean hasSupport(Block targetBlock) {
+        return !targetBlock.getRelative(BlockFace.DOWN).isPassable();
+    }
+
+    private boolean isUnderwater(Block block) {
+        if (block == null) {
+            return true;
+        }
+        if (block.getType() == Material.WATER || block.isLiquid()) {
+            return true;
+        }
+        if (block.getBlockData() instanceof Waterlogged waterlogged && waterlogged.isWaterlogged()) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isReplaceable(Block block) {
+        if (block == null) {
+            return false;
+        }
+        return block.isPassable() && !isUnderwater(block);
+    }
+
+    private record PlacementResult(boolean canPlace, Location location) {
+        static PlacementResult failed() {
+            return new PlacementResult(false, null);
+        }
+
+        static PlacementResult success(Location location) {
+            return new PlacementResult(true, location);
+        }
     }
 }

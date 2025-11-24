@@ -9,6 +9,7 @@ import it.crescentsun.api.common.ArtifactNamespacedKeys;
 import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.crescentcraft.CrescentCraft;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;

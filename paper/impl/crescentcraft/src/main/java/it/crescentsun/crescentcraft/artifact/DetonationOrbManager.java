@@ -4,17 +4,20 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import it.crescentsun.api.crescentcore.data.plugin.AbstractPluginDataManager;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataService;
+import it.crescentsun.api.crescentcore.event.player.PlayerJoinEventPostDBLoad;
 import it.crescentsun.api.crescentcore.sound.CompositeSoundEffect;
 import it.crescentsun.api.crescentcore.sound.SoundEffect;
 import it.crescentsun.crescentcraft.CrescentCraft;
 import it.crescentsun.crescentcraft.artifact.data.DetonationOrbData;
 import org.bukkit.*;
+import org.bukkit.block.data.Waterlogged;
 import org.bukkit.block.data.type.CoralWallFan;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockFadeEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -27,7 +30,7 @@ import java.util.UUID;
 
 public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraft, DetonationOrbData> implements Listener {
 
-    private static final Duration MAX_LIFETIME = Duration.ofDays(14);
+    private static final Duration MAX_LIFETIME = Duration.ofMinutes(5);
 
     private final SoundEffect placeSound;
     private final CompositeSoundEffect readySound;
@@ -76,13 +79,27 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
     }
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
+    public void onPlayerJoin(PlayerJoinEventPostDBLoad event) {
         deliverNotifications(event.getPlayer());
     }
 
     @EventHandler
     public void onWorldChange(PlayerChangedWorldEvent event) {
         deliverNotifications(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onBlockFade(BlockFadeEvent event) {
+        if (event.getBlock().getType() == Material.FIRE_CORAL_FAN) {
+            // If the block's location matches a Detonation Orb, cancel the fade
+            Location loc = event.getBlock().getLocation();
+            getAllData(true).stream()
+                    .filter(d -> d.getWorldUuid().equals(loc.getWorld().getUID()))
+                    .filter(d -> d.getX() == loc.getBlockX())
+                    .filter(d -> d.getY() == loc.getBlockY())
+                    .filter(d -> d.getZ() == loc.getBlockZ())
+                    .findFirst().ifPresent(data -> event.setCancelled(true));
+        }
     }
 
     private void deliverNotifications(Player player) {
@@ -112,7 +129,7 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
 
     private void prepareBlock(Location location, Material material) {
         location.getBlock().setType(material);
-        CoralWallFan blockData = ((CoralWallFan) location.getBlock().getBlockData());
+        Waterlogged blockData = ((Waterlogged) location.getBlock().getBlockData());
         blockData.setWaterlogged(false);
         location.getBlock().setBlockData(blockData);
     }

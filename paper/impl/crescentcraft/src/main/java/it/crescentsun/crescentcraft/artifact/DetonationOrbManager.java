@@ -58,8 +58,8 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
         explodeSound = new SoundEffect(plugin, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 2.0f, 1.2f);
     }
 
-    public void placeOrb(Player owner, Location location, boolean wallPlacement, BlockFace facing) {
-        prepareBlock(location, Material.DEAD_FIRE_CORAL_FAN, wallPlacement, facing);
+    public void placeOrb(Player owner, Location location) {
+        prepareBlock(location, Material.DEAD_FIRE_CORAL_FAN);
         placeSound.playAtLocation(location);
         ambientSound.playAtLocation(location);
         DetonationOrbData data = new DetonationOrbData(
@@ -166,13 +166,6 @@ public class DetonationOrbManager extends AbstractPluginDataManager<CrescentCraf
     }
 
     private void prepareBlock(Location location, Material material) {
-        BlockData blockData = location.getBlock().getBlockData();
-        boolean wallPlacement = blockData instanceof CoralWallFan;
-        BlockFace facing = wallPlacement ? ((CoralWallFan) blockData).getFacing() : null;
-        prepareBlock(location, material, wallPlacement, facing);
-    }
-
-    private void prepareBlock(Location location, Material material, boolean wallPlacement, BlockFace facing) {
         Runnable task = () -> {
             if (location.getWorld() == null) {
                 return;

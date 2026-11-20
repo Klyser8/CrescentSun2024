@@ -4,14 +4,11 @@ plugins {
     id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.8'
 }
 
-def channelhandler_version = project.findProperty('channelhandler_version')
-
 void addRepositories(Project project) {
     project.repositories {
         mavenCentral()
         maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
         maven { url = uri('https://oss.sonatype.org/content/groups/public/') }
-        maven { url  = uri("https://maven.mrnavastar.me/releases") }
         maven { url = uri('https://crescentsun.it/reposilite/releases') }
     }
 }
@@ -26,9 +23,6 @@ subprojects {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    project.version = [
-            "channel-handler" : channelhandler_version
-    ].get(project.name)
     project.group = "it.crescentsun"
     project.description = project.description ?: "No description provided"
 

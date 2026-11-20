@@ -6,7 +6,7 @@ import it.crescentsun.api.crescentcore.data.plugin.*;
 import it.crescentsun.api.crescentcore.util.TableNameUtil;
 import it.crescentsun.crescentcore.CrescentCore;
 import it.unimi.dsi.fastutil.Pair;
-import me.mrnavastar.protoweaver.api.netty.Sender;
+import it.crescentsun.crescentcore.messaging.PluginDataChange;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -48,19 +48,17 @@ public class PluginDataManager implements PluginDataService {
 
     @Override
     public <T extends PluginData> CompletableFuture<T> asyncSaveDataAndSync(@NotNull T pluginData) {
-        return CompletableFuture.supplyAsync(() -> saveData(pluginData)) // Start the async task
-            .exceptionally(e -> {
-                crescentCore.getLogger().severe("An error occurred while asynchronously saving plugin data to the database: " + e.getMessage());
-                e.printStackTrace(); // Log the full stack trace for better debugging
-                return null;
-            }).thenApplyAsync(data -> {
-                Sender send = crescentCore.getCrescentSunConnection().send(crescentCore.getPluginDataRegistry().getPluginDataSerializer().serialize(data));
-                if (send.isSuccess()) {
-                    return data;
-                } else {
-                    throw new CompletionException(new Throwable("Failed to send data to the proxy."));
-                }
-            });
+        return CompletableFuture.supplyAsync(() -> saveData(pluginData)).thenCompose(data -> {
+            if (data == null) {
+                return CompletableFuture.failedFuture(new IllegalStateException("Plugin data was not saved."));
+            }
+            PluginDataChange change = new PluginDataChange(PluginDataChange.Operation.UPSERT,
+                    getTableNameFromPluginDataClass(data.getClass()), data.getUuid());
+            return crescentCore.getMessagingService().publish(change).thenApply(ignored -> data);
+        }).exceptionally(error -> {
+            crescentCore.getLogger().severe("Failed to save and announce plugin data: " + error.getMessage());
+            throw new CompletionException(error);
+        });
     }
 
     @Override
@@ -73,17 +71,35 @@ public class PluginDataManager implements PluginDataService {
 
     @Override
     public <T extends PluginData> CompletableFuture<PluginDataIdentifier<T>> asyncDeleteDataAndSync(PluginDataIdentifier<T> identifier) {
-        return CompletableFuture.supplyAsync(() -> deleteData(identifier.classType(), identifier.uuid())).exceptionally(e -> {
-            crescentCore.getLogger().severe("An error occurred while asynchronously deleting data from the database: " + e.getMessage());
-            throw new CompletionException(new Throwable("Failed to asynchronously delete data and sync it with other servers for" + identifier));
-        }).thenApplyAsync(id -> {
-            Sender send = crescentCore.getCrescentSunConnection().send(crescentCore.getPluginDataRegistry().getPluginDataSerializer().serialize(identifier));
-            if (send.isSuccess()) {
-                return id;
-            } else {
-                throw new CompletionException(new Throwable("Failed to send data to the proxy upon deletion."));
+        return CompletableFuture.supplyAsync(() -> deleteData(identifier.classType(), identifier.uuid())).thenCompose(deleted -> {
+            if (deleted == null) {
+                return CompletableFuture.failedFuture(new IllegalStateException("Plugin data was not deleted."));
             }
+            PluginDataChange change = new PluginDataChange(PluginDataChange.Operation.DELETE,
+                    getTableNameFromPluginDataClass(identifier.classType()), identifier.uuid());
+            return crescentCore.getMessagingService().publish(change).thenApply(ignored -> deleted);
+        }).exceptionally(error -> {
+            crescentCore.getLogger().severe("Failed to delete and announce plugin data: " + error.getMessage());
+            throw new CompletionException(error);
         });
+    }
+
+    /** Applies a remote notice using SQL as the source of truth. Call on the Paper main thread. */
+    public void applyRemoteChange(PluginDataChange change) {
+        Class<? extends PluginData> dataClass = getPluginDataClassFromRawTableName(change.typeId());
+        if (dataClass == null) {
+            crescentCore.getLogger().warning("Ignoring update for unregistered plugin-data type " + change.typeId());
+            return;
+        }
+        if (change.operation() == PluginDataChange.Operation.DELETE) {
+            removeData(new PluginDataIdentifier(dataClass, change.recordId()));
+            return;
+        }
+        PluginData data = loadData(dataClass, change.recordId());
+        if (data != null) {
+            data.resolveOwningPlugin();
+            data.tryInit();
+        }
     }
 
     public  <T extends PluginData> void addDataTypeToCache(Class<T> classType) {
@@ -254,8 +270,11 @@ public class PluginDataManager implements PluginDataService {
             try (ResultSet resultSet = statement.executeQuery()) {
                 Constructor<? extends PluginData> constructor = dataClass.getDeclaredConstructor();
                 constructor.setAccessible(true);
+                if (!resultSet.next()) {
+                    return null;
+                }
                 dataInstance = constructor.newInstance();
-                if (resultSet.next()) {
+                {
                     int index = 1;
                     for (Field field : getSerializableFields(dataClass).keySet()) {
                         Object value;

@@ -14,7 +14,7 @@ lumenspawn-api = "1.0.0"
 
 # Other dependencies
 hikari-cp = "7.0.2"
-protoweaver = "1.4.9"
+lettuce = "6.9.0.RELEASE"
 crescentmsg = "1.2.1"
 
 # Test
@@ -25,13 +25,12 @@ mockbukkit_version = "3.107.0"
 # Paper
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api"}
 hikari-cp = { module = "com.zaxxer:HikariCP", version.ref = "hikari-cp"}
-protoweaver-paper = { module = "me.mrnavastar.protoweaver:paper", version.ref = "protoweaver"}
+lettuce = { module = "io.lettuce:lettuce-core", version.ref = "lettuce"}
 #javax-annotation = {module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation"}
 crescentmsg = { module = "it.crescentsun:crescentmsg", version.ref = "crescentmsg"}
 
 # Velocity
 velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "velocity-api"}
-protoweaver-velocity = { module = "me.mrnavastar.protoweaver:proxy", version.ref = "protoweaver"}
 
 # Crescent Sun API reps
 crescent-core-api = { module = "it.crescentsun.api:crescent-core", version.ref = "crescent-core-api"}

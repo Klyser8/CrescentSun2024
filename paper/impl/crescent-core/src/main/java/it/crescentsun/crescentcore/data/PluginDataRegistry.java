@@ -6,8 +6,6 @@ import it.crescentsun.api.crescentcore.data.plugin.PluginDataIdentifier;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataRegistryService;
 import it.crescentsun.api.crescentcore.data.plugin.SingletonPluginData;
 import it.crescentsun.crescentcore.CrescentCore;
-import it.unimi.dsi.fastutil.objects.ObjectObjectImmutablePair;
-import me.mrnavastar.protoweaver.core.util.ObjectSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.lang.reflect.InvocationTargetException;
@@ -27,14 +25,10 @@ public final class PluginDataRegistry implements PluginDataRegistryService {
 
     private boolean isFrozen;
     private final List<Class<? extends PluginData>> registry = new CopyOnWriteArrayList<>();
-    private final ObjectSerializer pluginDataSerializer = new ObjectSerializer();
     private final CrescentCore crescentCore;
 
     public PluginDataRegistry(CrescentCore crescentCore) {
         this.crescentCore = crescentCore;
-        pluginDataSerializer.register(byte[].class);
-        pluginDataSerializer.register(PluginDataIdentifier.class);
-        pluginDataSerializer.register(ObjectObjectImmutablePair.class);
     }
 
     /**
@@ -57,7 +51,6 @@ public final class PluginDataRegistry implements PluginDataRegistryService {
         }
         registry.add(dataClass);
         crescentCore.getPluginDataManager().addDataTypeToCache(dataClass);
-        pluginDataSerializer.register(dataClass);
         if (SingletonPluginData.class.isAssignableFrom(dataClass)) {
             try {
                 SingletonPluginData pluginData = (SingletonPluginData) dataClass.getConstructor().newInstance();
@@ -74,10 +67,6 @@ public final class PluginDataRegistry implements PluginDataRegistryService {
     @Override
     public List<Class<? extends PluginData>> getRegistry() {
         return ImmutableList.copyOf(registry);
-    }
-
-    public ObjectSerializer getPluginDataSerializer() {
-        return pluginDataSerializer;
     }
 
     public void freezeRegistry() {

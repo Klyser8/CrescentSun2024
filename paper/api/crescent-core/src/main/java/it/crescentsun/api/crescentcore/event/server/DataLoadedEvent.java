@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Event called after {@link ServerLoadEvent}, after initial database set up + data loading is complete.
  * <b>IMPORTANT</b>: This event is fired <u>before</u> any connection to the proxy is made!
- * To run logic after the connection to the proxy is made, use {@link ProxyConnectedEvent}.
+ * For logic requiring network initialization, use {@link ProxyConnectedEvent} (retained for API compatibility).
  */
 @SuppressWarnings("ALL")
 public class DataLoadedEvent extends ServerLoadEvent {

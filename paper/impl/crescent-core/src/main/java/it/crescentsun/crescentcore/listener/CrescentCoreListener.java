@@ -167,12 +167,15 @@ public class CrescentCoreListener implements Listener {
 
         crescentCore.getPlayerDataManager().init();
         crescentCore.getPluginDataManager().init();
+        crescentCore.getMessagingService().subscribe(crescentCore::receivePluginDataChange);
         for (Player player : Bukkit.getOnlinePlayers()) {
             crescentCore.getPlayerDataManager().loadData(player.getUniqueId());
         }
         crescentCore.getPluginDataManager().loadAllData();
         DataLoadedEvent dataLoadedEvent = new DataLoadedEvent(event.getType()); // plugin data service is needed here.
         Bukkit.getPluginManager().callEvent(dataLoadedEvent);
+        // Retain the existing extension callback until plugins migrate away from proxy terminology.
+        Bukkit.getPluginManager().callEvent(new ProxyConnectedEvent());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -207,7 +210,7 @@ public class CrescentCoreListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onProtoWeaverConnectionEstablished(ProxyConnectedEvent event) {
+    public void onNetworkInitialized(ProxyConnectedEvent event) {
         triggerEventForPlugins(CrescentPlugin::onProxyConnected);
     }
 

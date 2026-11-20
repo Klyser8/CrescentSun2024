@@ -16,7 +16,7 @@ public interface CrescentCoreAPI {
     String getServerName();
 
     /**
-     * Gets the list of servers.
+     * Gets the names of backends with a recent Redis heartbeat.
      *
      * @return an immutable list of server names
      */

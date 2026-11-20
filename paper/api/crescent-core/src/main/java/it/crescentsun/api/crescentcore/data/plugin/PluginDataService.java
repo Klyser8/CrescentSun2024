@@ -85,8 +85,7 @@ public interface PluginDataService {
 
     /**
      * Asynchronously saves a plugin data instance to the database.
-     * Upon completion, the data instance will be serialized through ProtoWeaver and sent to the proxy for sorting.
-     * Once sorted, the data will be deserialized by other backend servers and stored in their repositories.
+     * Upon completion, the data instance is stored in SQL and a notification is published so other backends can refresh their caches.
      * @param pluginData The data instance to be saved and synced.
      * @param <T> The type of the data instance.
      * @return A future that will complete when the data is saved and synced.
@@ -115,8 +114,7 @@ public interface PluginDataService {
 
     /**
      * Asynchronously deletes a plugin data instance from the database.
-     * Upon completion, the data identifier will be serialized through ProtoWeaver and sent to the proxy for sorting.
-     * Once sorted, the data will be removed from other backend servers' repositories too.
+     * Upon completion, the data is deleted from SQL and a notification is published so other backends can evict it from their caches.
      * @param identifier The identifier of the data instance.
      * @param <T> The type of the data instance.
      * @return A future that will complete when the data is deleted and synced.

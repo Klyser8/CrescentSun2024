@@ -25,7 +25,6 @@ void addRepositories(Project project) {
         maven { url = uri('https://oss.sonatype.org/content/groups/public/') }
         maven { url = uri('https://repo.maven.apache.org/maven2/') }
         maven { url = uri('https://crescentsun.it/reposilite/releases') }
-        maven { url  = uri("https://maven.mrnavastar.me/releases") }
     }
 }
 

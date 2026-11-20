@@ -5,5 +5,12 @@ db:
   user: user
   password: pwd
   max_pool_size: 5
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  database: 0
+  channel: crescent:plugin-data
+  server_registry_key: crescent:servers:online
 auto_save_interval: 4000
 debug_level: 2

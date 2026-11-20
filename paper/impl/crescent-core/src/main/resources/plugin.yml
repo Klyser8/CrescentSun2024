@@ -6,5 +6,4 @@ authors:
   - $author
 description: $description
 depend:
-  - ProtoWeaver
   - triumph-cmd

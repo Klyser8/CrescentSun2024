@@ -2,21 +2,14 @@ description = "Core plugin for Crescent Sun Network"
 
 dependencies {
     implementation libs.hikari.cp
+    implementation libs.lettuce
     implementation libs.crescent.core.api // The plugin which populates the API must always implement its own API, and depending plugins should have it in compileOnly.
     implementation libs.crescentmsg
     implementation libs.crescent.common
-    api(libs.protoweaver.paper) {
-        artifact {
-            name = "paper"
-            extension = "jar"
-            classifier = ""
-        }
-    }
 }
 
 shadowJar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archiveClassifier.set("")
-    exclude 'me/mrnavastar/**'
     exclude 'org/slf4j/**'
 }

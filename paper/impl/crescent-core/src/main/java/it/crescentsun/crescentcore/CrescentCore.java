@@ -24,11 +24,10 @@ import it.crescentsun.crescentcore.event.AutoSaveEvent;
 import it.crescentsun.crescentcore.lang.CrescentCoreLocalization;
 import it.crescentsun.crescentcore.listener.CrescentCoreListener;
 import it.crescentsun.crescentcore.listener.MiscListener;
-import it.crescentsun.crescentcore.network.CrescentSunServerHandler;
+import it.crescentsun.crescentcore.messaging.MessagingService;
+import it.crescentsun.crescentcore.messaging.PluginDataChange;
+import it.crescentsun.crescentcore.messaging.RedisMessagingService;
 import it.crescentsun.triumphcmd.bukkit.BukkitCommandManager;
-import me.mrnavastar.protoweaver.api.netty.ProtoConnection;
-import me.mrnavastar.protoweaver.api.protocol.CompressionType;
-import me.mrnavastar.protoweaver.api.protocol.Protocol;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -48,16 +47,11 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
     public static final UUID STATISTICS_UUID =  UUID.fromString("962a383f-8504-4d51-b790-e1eaeb3b007f");
     private DatabaseManager dbManager = null;
 
-    private Protocol crescentSunProtocol = Protocol.create("crescentsun", "msg")
-            .setServerHandler(CrescentSunServerHandler.class)
-            .setMaxPacketSize(67108864)
-            .setCompression(CompressionType.GZIP)
-            .addPacket(byte[].class)
-            .load();
-    private ProtoConnection crescentSunConnection;
+    private MessagingService messagingService;
 
     private PlayerDataRegistryService playerDataRegistryService;
     private PluginDataRegistryService pluginDataRegistryService;
+    private boolean dataSystemsReady;
 
     private static CrescentCore instance;
 
@@ -69,6 +63,8 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
     public void onEnable() {
         instance = this;
         saveDefaultConfig();                                     //Saves the default config.yml file if it doesn't exist
+        serverName = resolveServerName();
+        serverList = new ArrayList<>(List.of(serverName));
 
         CrescentCoreLocalization crescentCoreLocalization = new CrescentCoreLocalization();
         crescentCoreLocalization.registerEnglishTranslations();
@@ -81,8 +77,16 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
         BukkitCommandManager<CommandSender> commandManager = BukkitCommandManager.create(this);
         commandManager.registerCommand(new CrescentCoreCommands(this));
         establishDatabaseConnection();
+        messagingService = new RedisMessagingService(this,
+                getConfig().getString("redis.host", "localhost"),
+                getConfig().getInt("redis.port", 6379),
+                getConfig().getString("redis.password", ""),
+                getConfig().getInt("redis.database", 0),
+                getConfig().getString("redis.channel", "crescent:plugin-data"),
+                getConfig().getString("redis.server_registry_key", "crescent:servers:online"));
         initServices();
         PluginData.setPluginDataService(pluginDataService);
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> refreshOnlineServers(), 0L, 200L);
     }
 
     @Override
@@ -114,6 +118,7 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
         getStatistics().setLastRestart(new Timestamp(System.currentTimeMillis()));
 
         scheduleAutoSave();                                      //Schedules the auto save task
+        dataSystemsReady = true;
     }
 
     @Override
@@ -137,8 +142,11 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
         // Plugin shutdown logic
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, "BungeeCord");
         Bukkit.getScheduler().cancelTasks(this);               //Cancels all tasks
-        dbManager.saveEverything();
+        if (messagingService != null) messagingService.close();
         if (dbManager != null) {
+            if (dataSystemsReady) {
+                dbManager.saveEverything();
+            }
             dbManager.disconnect();
         }
     }
@@ -204,16 +212,39 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
         return serverName;
     }
 
+    private String resolveServerName() {
+        String environmentName = System.getenv("SERVER_NAME");
+        if (environmentName != null && !environmentName.isBlank()) {
+            return environmentName.trim();
+        }
+
+        // Keep config fallback for local/non-container launches and existing deployments.
+        String configuredName = getConfig().getString("server_name");
+        if (configuredName != null && !configuredName.isBlank()) {
+            getLogger().warning("SERVER_NAME is unset; using the legacy server_name config value.");
+            return configuredName.trim();
+        }
+
+        throw new IllegalStateException("SERVER_NAME environment variable is required (or set server_name in config.yml outside Docker).");
+    }
+
     @Override
     public List<String> getServerList() {
         return List.copyOf(serverList);
     }
 
+    private void refreshOnlineServers() {
+        messagingService.updateServerHeartbeat(serverName).whenComplete((servers, error) -> {
+            if (error != null) {
+                getLogger().warning("Could not refresh the Redis server registry: " + error.getMessage());
+                return;
+            }
+            Bukkit.getScheduler().runTask(this, () -> setServerList(new ArrayList<>(servers)));
+        });
+    }
+
     @ApiStatus.Internal
     public void setServerList(List<String> serverList) {
-        // Copy to a mutable list
-        serverList = new ArrayList<>(serverList);
-        serverList.replaceAll(s -> s.startsWith("dev") ? s.substring(3) : s);
         this.serverList = ImmutableList.copyOf(serverList);
     }
 
@@ -223,12 +254,12 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
         this.serverName = serverName;
     }
 
-    public ProtoConnection getCrescentSunConnection() {
-        return crescentSunConnection;
+    public MessagingService getMessagingService() {
+        return messagingService;
     }
 
-    public void setCrescentSunConnection(ProtoConnection crescentSunConnection) {
-        this.crescentSunConnection = crescentSunConnection;
+    public void receivePluginDataChange(PluginDataChange change) {
+        Bukkit.getScheduler().runTask(this, () -> getPluginDataManager().applyRemoteChange(change));
     }
 
     public void setStatistics(ServerStatistics statistics) {

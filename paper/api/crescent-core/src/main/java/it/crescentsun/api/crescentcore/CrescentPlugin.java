@@ -81,10 +81,8 @@ public abstract class CrescentPlugin extends JavaPlugin {
     }
 
     /**
-     * Called when the plugin has successfully connected to the (velocity) proxy, through ProtoWeaver.
-     * This is always called after the database data has been cached, usually 1-5 seconds after the backend server
-     * has finished loading.<br><br>
-     * Any code reliant on other backend servers or the proxy should be executed here, though you can also listen to the {@link ProxyConnectedEvent} <br>
+     * Called when CrescentCore has loaded its database cache and initialized network services.
+     * Any code that relies on the configured server identity or the network should be executed here.
      * <b>Any logic which other plugins may rely on should NOT be run async in this method.</b>
      */
     public void onProxyConnected() {

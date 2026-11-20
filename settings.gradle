@@ -56,5 +56,4 @@ include 'paper:api:lumenspawn'
 
 // Velocity
 include 'velocity'
-include 'velocity:channel-handler'
 

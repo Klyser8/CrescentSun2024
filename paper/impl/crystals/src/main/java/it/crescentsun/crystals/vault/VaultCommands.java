@@ -21,6 +21,7 @@ import org.bukkit.util.Vector;
 import org.joml.Vector3i;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Command(value = "vault", alias = "v")
 public class VaultCommands {
@@ -121,20 +122,8 @@ public class VaultCommands {
                 return;
             }
             UUID vaultUuid = UUID.fromString(vaultStringUuid);
-            VaultData vault = vaultManager.deleteVault(vaultUuid);
-            if (vault == null){
-                String raw = "<#DE0A0A>Something went wrong while trying to delete the vault.";
-                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
-                sender.sendMessage(textComponent);
-            } else {
-                String raw = "<#FFDE59>Deleted vault at " +
-                        "<#ffffff>" + vault.getLocation().getWorld().getName() + " (" +
-                        vault.getLocation().getBlockX() + ", " +
-                        vault.getLocation().getBlockY() + ", " +
-                        vault.getLocation().getBlockZ() + ")";
-                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
-                sender.sendMessage(textComponent);
-            }
+            sendDeleteResult(sender, vaultManager.deleteVault(vaultUuid),
+                    "<#DE0A0A>Something went wrong while trying to delete the vault.");
         }
         else {
             // Delete the vault at the specified coordinates
@@ -150,21 +139,22 @@ public class VaultCommands {
                 sender.sendMessage(textComponent);
                 return;
             }
-            VaultData vault = vaultManager.deleteVault(new Location(player.getWorld(), vaultX, vaultY, vaultZ));
-            if (vault == null) {
-                String raw = "<#DE0A0A>Could not find a vault at the specified coordinates. Are you in the right world / server?";
-                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
-                sender.sendMessage(textComponent);
-            } else {
-                String raw = "<#FFDE59>Deleted vault at " +
-                        "<#ffffff>" + vault.getLocation().getWorld().getName() + " (" +
-                        vault.getLocation().getBlockX() + ", " +
-                        vault.getLocation().getBlockY() + ", " +
-                        vault.getLocation().getBlockZ() + ")";
-                TextComponent textComponent = (TextComponent) MiniMessage.miniMessage().deserialize(raw);
-                sender.sendMessage(textComponent);
-            }
+            sendDeleteResult(sender, vaultManager.deleteVault(new Location(player.getWorld(), vaultX, vaultY, vaultZ)),
+                    "<#DE0A0A>Could not find a vault at the specified coordinates. Are you in the right world / server?");
         }
+    }
+
+    private void sendDeleteResult(CommandSender sender, CompletableFuture<VaultData> deletion, String failureMessage) {
+        deletion.whenComplete((vault, error) -> plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (error != null || vault == null) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(failureMessage));
+                return;
+            }
+            String raw = "<#FFDE59>Deleted vault at <#ffffff>" + vault.getLocation().getWorld().getName() + " ("
+                    + vault.getLocation().getBlockX() + ", " + vault.getLocation().getBlockY() + ", "
+                    + vault.getLocation().getBlockZ() + ")";
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(raw));
+        }));
     }
 
     @Permission("crescent.vault.list")

@@ -142,13 +142,13 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
         // Plugin shutdown logic
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, "BungeeCord");
         Bukkit.getScheduler().cancelTasks(this);               //Cancels all tasks
-        if (messagingService != null) messagingService.close();
         if (dbManager != null) {
             if (dataSystemsReady) {
                 dbManager.saveEverything();
             }
             dbManager.disconnect();
         }
+        if (messagingService != null) messagingService.close();
     }
 
     @Override
@@ -189,7 +189,9 @@ public class CrescentCore extends CrescentPlugin implements CrescentCoreAPI {
                 return;
             }
             if (!Bukkit.getOnlinePlayers().isEmpty()) {
-                getPlayerDataManager().asyncSaveAllData();
+                getPlayerDataManager().asyncSaveAllData().whenComplete((saved, error) -> {
+                    if (error != null) getLogger().severe("Automatic player-data save failed: " + error.getMessage());
+                });
             }
         }, interval, interval);
     }

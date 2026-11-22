@@ -261,17 +261,16 @@ public class JumpListener implements Listener {
                 if (ticks >= 30 && !isCurrentlyWarping) {
                     plugin.getLogger().info("Sending player to server.");
                     isCurrentlyWarping = true;
-                    future.thenApplyAsync(playerData -> {
-                        if (playerData != null) {
-                            BungeeUtils.sendPlayerToServer(
-                                    plugin, player, jumpWarp.getDestinationServer());
-                        } else {
-                            player.sendMessage(JumpWarpLocalization.ERROR_CANNOT_TELEPORT.getFormattedMessage(player.locale(), jumpWarp.getDestinationServer()));
+                    future.whenComplete((playerData, error) -> plugin.getServer().getScheduler().runTask(plugin, () -> {
+                        if (error == null && playerData != null && player.isOnline()) {
+                            BungeeUtils.sendPlayerToServer(plugin, player, jumpWarp.getDestinationServer());
+                            plugin.getPlayerDataService().removeData(player.getUniqueId());
+                        } else if (player.isOnline()) {
+                            player.sendMessage(JumpWarpLocalization.ERROR_CANNOT_TELEPORT.getFormattedMessage(
+                                    player.locale(), jumpWarp.getDestinationServer()));
                         }
-                        plugin.getPlayerDataService().removeData(player.getUniqueId());
                         cancel();
-                        return playerData;
-                    });
+                    }));
                 }
                 if (player.getVelocity().getY() > 1) {
                     spawnParticles(world, player);

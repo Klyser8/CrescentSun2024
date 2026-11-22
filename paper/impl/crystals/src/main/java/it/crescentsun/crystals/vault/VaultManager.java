@@ -61,14 +61,12 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
      * @param location The location of the vault to delete.
      * @return The VaultData object that was deleted, or null if no vault was found at the location.
      */
-    public VaultData deleteVault(@NotNull Location location) {
+    public CompletableFuture<VaultData> deleteVault(@NotNull Location location) {
         VaultData vaultData = getVaultAtLocation(location);
         if (vaultData == null) {
-            return null;
+            return CompletableFuture.completedFuture(null);
         }
-        CompletableFuture<PluginDataIdentifier<PluginData>> future = vaultData.deleteAndSync();
-        future.join(); // Wait for the deletion to complete
-        return vaultData;
+        return vaultData.deleteAndSync().thenApply(ignored -> vaultData);
     }
 
     /**
@@ -77,14 +75,12 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
      * @param vaultUUID The UUID of the vault to delete.
      * @return The VaultData object that was deleted, or null if no vault was found with the given UUID.
      */
-    public VaultData deleteVault(@NotNull UUID vaultUUID) {
+    public CompletableFuture<VaultData> deleteVault(@NotNull UUID vaultUUID) {
         VaultData vaultData = getDataInstance(vaultUUID);
         if (vaultData == null) {
-            return null;
+            return CompletableFuture.completedFuture(null);
         }
-        CompletableFuture<PluginDataIdentifier<PluginData>> future = vaultData.deleteAndSync();
-        future.join(); // Wait for the deletion to complete
-        return vaultData;
+        return vaultData.deleteAndSync().thenApply(ignored -> vaultData);
     }
 
     /**
@@ -93,10 +89,10 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
      * @param ownerUUID The UUID of the owner whose vaults should be deleted.
      * @return An array of VaultData objects that were deleted or an empty array if no vaults were found.
      */
-    public VaultData[] deleteVaultsOwnedBy(@NotNull UUID ownerUUID) {
+    public CompletableFuture<VaultData[]> deleteVaultsOwnedBy(@NotNull UUID ownerUUID) {
         UUID[] vaultIds = getVaultsByOwner(ownerUUID);
         if (vaultIds.length == 0) {
-            return new VaultData[0];
+            return CompletableFuture.completedFuture(new VaultData[0]);
         }
         VaultData[] vaults = Arrays.stream(vaultIds)
                 .map(this::getDataInstance)
@@ -107,9 +103,7 @@ public class VaultManager extends AbstractPluginDataManager<Crystals, VaultData>
                 .map(VaultData::deleteAndSync)
                 .toList();
 
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join(); // wait once
-
-        return vaults;
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(ignored -> vaults);
     }
 
     /**

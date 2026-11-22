@@ -177,15 +177,23 @@ public class VaultListener implements Listener {
             if (vaultEvent.isCancelled()) {
                 return;
             }
-            VaultData vault = plugin.getVaultManager().deleteVault(closestVault.getUuid());
-            plugin.getCrystalsSFX().vaultBreak.playAtLocation(breakLoc);
-            String raw = CrescentHexCodes.RED + "You have destroyed the Crystal Vault found at <yellow>%d<white>, <yellow>%d<white>, <yellow>%d<white>.";
-
-            String formatted = String.format(raw, vault.getX(), vault.getY(), vault.getZ());
-            player.sendMessage(MiniMessage.miniMessage().deserialize(formatted));
-            if (vaultEvent.shouldDropCrystal()) {
-                plugin.getCrystalsService().dropCrystals(player, vault.getLocation().add(0, 2, 0), 1, CrystalSource.BLOCK_DROP);
-            }
+            plugin.getVaultManager().deleteVault(closestVault.getUuid()).whenComplete((vault, error) ->
+                    plugin.getServer().getScheduler().runTask(plugin, () -> {
+                        if (error != null || vault == null) {
+                            plugin.getLogger().severe("Could not delete vault " + closestVault.getUuid()
+                                    + (error == null ? "." : ": " + error.getMessage()));
+                            if (player.isOnline()) player.sendMessage(MiniMessage.miniMessage().deserialize(
+                                    CrescentHexCodes.RED + "Could not delete the Crystal Vault."));
+                            return;
+                        }
+                        plugin.getCrystalsSFX().vaultBreak.playAtLocation(breakLoc);
+                        String raw = CrescentHexCodes.RED + "You have destroyed the Crystal Vault found at <yellow>%d<white>, <yellow>%d<white>, <yellow>%d<white>.";
+                        String formatted = String.format(raw, vault.getX(), vault.getY(), vault.getZ());
+                        if (player.isOnline()) player.sendMessage(MiniMessage.miniMessage().deserialize(formatted));
+                        if (vaultEvent.shouldDropCrystal() && player.isOnline()) {
+                            plugin.getCrystalsService().dropCrystals(player, vault.getLocation().add(0, 2, 0), 1, CrystalSource.BLOCK_DROP);
+                        }
+                    }));
         } else {
             event.setCancelled(true);
             player.sendMessage(MiniMessage.miniMessage().deserialize(

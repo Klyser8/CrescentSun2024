@@ -15,10 +15,19 @@ import org.bukkit.NamespacedKey;
 import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 public class DatabaseManager {
+    public static final String PLUGIN_DATA_OUTBOX_TABLE = "crescent_plugin_data_outbox";
 
     private final HikariDataSource dataSource;
+    private final ExecutorService databaseExecutor;
     private final CrescentCore crescentCore;
     private final List<String> tableNames = new ArrayList<>();
     public DatabaseManager(CrescentCore crescentCore, String host, int port, String database, String username, String password, int maxPoolSize) {
@@ -33,6 +42,12 @@ public class DatabaseManager {
         config.setMaximumPoolSize(maxPoolSize); // Adjust the pool size as needed
 
         dataSource = new HikariDataSource(config);
+        AtomicInteger threadNumber = new AtomicInteger();
+        databaseExecutor = Executors.newFixedThreadPool(maxPoolSize, task -> {
+            Thread thread = new Thread(task, "crescent-database-" + threadNumber.incrementAndGet());
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     public void initTables() {
@@ -51,6 +66,51 @@ public class DatabaseManager {
 
         createTables();
         updateAllTables();
+        createPluginDataOutboxTable();
+        ensureTransactionalTables();
+    }
+
+    private void createPluginDataOutboxTable() {
+        String query = "CREATE TABLE IF NOT EXISTS " + PLUGIN_DATA_OUTBOX_TABLE + " ("
+                + "event_id VARCHAR(36) NOT NULL PRIMARY KEY, "
+                + "operation VARCHAR(8) NOT NULL, "
+                + "type_id VARCHAR(64) NOT NULL, "
+                + "record_id VARCHAR(36) NOT NULL, "
+                + "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "INDEX idx_crescent_plugin_outbox_created_at (created_at)"
+                + ") ENGINE=InnoDB";
+        try (Connection connection = getConnection(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate(query);
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to create plugin-data notification outbox table.", exception);
+        }
+    }
+
+    private void ensureTransactionalTables() {
+        List<String> transactionalTables = new ArrayList<>(tableNames);
+        transactionalTables.add(PLUGIN_DATA_OUTBOX_TABLE);
+        String engineQuery = "SELECT ENGINE FROM information_schema.TABLES "
+                + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement engineStatement = connection.prepareStatement(engineQuery);
+             Statement alterStatement = connection.createStatement()) {
+            for (String tableName : transactionalTables) {
+                engineStatement.setString(1, tableName);
+                String engine;
+                try (ResultSet resultSet = engineStatement.executeQuery()) {
+                    if (!resultSet.next()) {
+                        throw new IllegalStateException("Expected database table " + tableName + " was not created.");
+                    }
+                    engine = resultSet.getString("ENGINE");
+                }
+                if (!"InnoDB".equalsIgnoreCase(engine)) {
+                    alterStatement.executeUpdate("ALTER TABLE " + tableName + " ENGINE=InnoDB");
+                    crescentCore.getLogger().info("Converted " + tableName + " to InnoDB for transactional persistence.");
+                }
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to verify transactional database table engines.", exception);
+        }
     }
 
     /**
@@ -78,7 +138,7 @@ public class DatabaseManager {
      * @return The query to create the table
      */
     private String populateCreateTableQuery(String tableName) {
-        String query = "CREATE TABLE IF NOT EXISTS " + tableName + " (%COLUMN_LIST%);";
+        String query = "CREATE TABLE IF NOT EXISTS " + tableName + " (%COLUMN_LIST%) ENGINE=InnoDB;";
         StringBuilder columns = new StringBuilder();
 
         if (TableNameUtil.isPlayerDataTable(tableName)) {
@@ -251,7 +311,24 @@ public class DatabaseManager {
         return connection;
     }
 
+    public <T> CompletableFuture<T> executeAsync(Supplier<T> operation) {
+        try {
+            return CompletableFuture.supplyAsync(operation, databaseExecutor);
+        } catch (RejectedExecutionException exception) {
+            return CompletableFuture.failedFuture(exception);
+        }
+    }
+
     public void disconnect() {
+        databaseExecutor.shutdown();
+        try {
+            if (!databaseExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                databaseExecutor.shutdownNow();
+            }
+        } catch (InterruptedException exception) {
+            databaseExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
         if (dataSource != null) {
             dataSource.close();
         }

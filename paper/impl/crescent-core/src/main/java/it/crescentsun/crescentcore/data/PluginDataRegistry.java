@@ -5,11 +5,15 @@ import it.crescentsun.api.crescentcore.data.plugin.PluginData;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataIdentifier;
 import it.crescentsun.api.crescentcore.data.plugin.PluginDataRegistryService;
 import it.crescentsun.api.crescentcore.data.plugin.SingletonPluginData;
+import it.crescentsun.api.crescentcore.data.plugin.DatabaseTable;
+import it.crescentsun.api.crescentcore.util.TableNameUtil;
 import it.crescentsun.crescentcore.CrescentCore;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -45,22 +49,25 @@ public final class PluginDataRegistry implements PluginDataRegistryService {
         if (isFrozen) {
             throw new UnsupportedOperationException("The plugin data registry is frozen and cannot be modified.");
         }
+        Objects.requireNonNull(plugin, "Registering plugin cannot be null");
+        Objects.requireNonNull(dataClass, "Plugin data class cannot be null");
         // Throw exception if dataClass doesn't extend PluginData
         if (!PluginData.class.isAssignableFrom(dataClass)) {
             throw new IllegalArgumentException("The data class must extend PluginData.");
         }
-        registry.add(dataClass);
-        crescentCore.getPluginDataManager().addDataTypeToCache(dataClass);
-        if (SingletonPluginData.class.isAssignableFrom(dataClass)) {
-            try {
-                SingletonPluginData pluginData = (SingletonPluginData) dataClass.getConstructor().newInstance();
-                crescentCore.getPluginDataManager().insertData(pluginData.getUuid(), pluginData, false);
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                     NoSuchMethodException e) {
-                CrescentCore.getInstance().getLogger().severe("Failed to instantiate singleton plugin data class " + dataClass.getName());
-                e.printStackTrace();
-            }
+        if (registry.contains(dataClass)) {
+            throw new IllegalArgumentException("Plugin data class registered more than once: " + dataClass.getName());
         }
+        if (!dataClass.isAnnotationPresent(DatabaseTable.class)) {
+            throw new IllegalArgumentException("Plugin data class " + dataClass.getName()
+                    + " must be annotated with @DatabaseTable.");
+        }
+        Class<?> declaredOwner = dataClass.getAnnotation(DatabaseTable.class).plugin();
+        if (!declaredOwner.isInstance(plugin)) {
+            throw new IllegalArgumentException("Plugin data class " + dataClass.getName() + " declares owner "
+                    + declaredOwner.getName() + " but was registered by " + plugin.getClass().getName() + ".");
+        }
+        registry.add(dataClass);
         CrescentCore.getInstance().getLogger().info("Plugin data class registered for plugin " + plugin.getName() + ": " + dataClass.getName());
     }
 
@@ -70,6 +77,29 @@ public final class PluginDataRegistry implements PluginDataRegistryService {
     }
 
     public void freezeRegistry() {
+        if (isFrozen) return;
+
+        List<String> playerTableNames = new ArrayList<>();
+        for (String pluginName : crescentCore.getPlayerDataRegistry().getRegisteredPluginNames()) {
+            playerTableNames.add(TableNameUtil.appendPlayerDataTablePrefix(pluginName));
+        }
+        List<Class<? extends PluginData>> registeredClasses = List.copyOf(registry);
+        crescentCore.getPluginDataManager().initializeRegisteredDataTypes(registeredClasses, playerTableNames);
+
+        for (Class<? extends PluginData> dataClass : registeredClasses) {
+            if (!SingletonPluginData.class.isAssignableFrom(dataClass)) continue;
+            try {
+                var constructor = dataClass.getDeclaredConstructor();
+                constructor.setAccessible(true);
+                SingletonPluginData pluginData = (SingletonPluginData) constructor.newInstance();
+                crescentCore.getPluginDataManager().insertData(pluginData.getUuid(), pluginData, false);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                     NoSuchMethodException exception) {
+                throw new IllegalStateException("Failed to instantiate singleton plugin data class "
+                        + dataClass.getName() + " during registry freeze.", exception);
+            }
+        }
+
         isFrozen = true;
         CrescentCore.getInstance().getLogger().info("Plugin Data Registry frozen! " +
                 "No more plugin data can be registered.");

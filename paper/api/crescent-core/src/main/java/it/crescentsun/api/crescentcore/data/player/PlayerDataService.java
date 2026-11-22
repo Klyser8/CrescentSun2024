@@ -16,7 +16,8 @@ import java.util.concurrent.CompletableFuture;
 public interface PlayerDataService {
 
     /**
-     * Returns the PlayerData object for the given player UUID.
+     * Returns the PlayerData object for the given player UUID. The returned object may only be read or
+     * mutated on the Paper server thread because its accessors dispatch Bukkit events.
      * @param playerUuid The UUID of the player
      * @return The PlayerData object for the given player UUID
      */
@@ -36,15 +37,17 @@ public interface PlayerDataService {
     List<PlayerData> getAllData();
 
     /**
-     * Saves the PlayerData object asynchronously, for the given player UUID to the database.
-     * @param playerUuid The UUID of the player =
-     * @return The PlayerData object for the given player UUID
+     * Captures persistent values on the Paper server thread, writes that snapshot asynchronously, then
+     * completes with the current cached object on the Paper server thread. The future completes
+     * exceptionally if snapshotting, persistence, or publication of the result fails.
+     * @param playerUuid The UUID of the player
+     * @return A future containing the saved player's cached data, or {@code null} if it was not cached
      */
     CompletableFuture<PlayerData> saveDataAsync(UUID playerUuid);
     /**
      * @see #saveDataAsync(UUID)
      * @param player The player whose data you want to save
-     * @return The PlayerData object for the given player
+     * @return A future containing the saved player's cached data
      */
     default CompletableFuture<PlayerData> saveDataAsync(Player player) {
         return saveDataAsync(player.getUniqueId());
@@ -52,14 +55,15 @@ public interface PlayerDataService {
     /**
      * @see #saveDataAsync(UUID)
      * @param playerData The PlayerData object you want to save
-     * @return The PlayerData object for the given player
+     * @return A future containing the saved player's cached data
      */
     default CompletableFuture<PlayerData> saveDataAsync(PlayerData playerData) {
         return saveDataAsync(playerData.getPlayer().getUniqueId());
     }
 
     /**
-     * Loads the PlayerData object asynchronously, for the given player UUID from the database.
+     * Reads player values asynchronously, then creates and publishes the PlayerData object on the Paper
+     * server thread. The future completes exceptionally if the database read or server-thread publication fails.
      * @param playerUuid The UUID of the player
      * @return The PlayerData object for the given player UUID
      */

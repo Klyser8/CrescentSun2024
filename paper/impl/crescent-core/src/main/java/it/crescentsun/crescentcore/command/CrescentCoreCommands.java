@@ -49,16 +49,14 @@ public class CrescentCoreCommands {
             sender.sendMessage(CrescentCoreLocalization.GENERIC_ALREADY_CONNECTED_TO_SERVER.getFormattedMessage(player.locale(), serverName));
             return;
         }
-        crescentCore.getPlayerDataManager().saveDataAsync(player.getUniqueId()).thenApplyAsync(playerData -> {
-            if (playerData != null) {
-                BungeeUtils.sendPlayerToServer(
-                        crescentCore, player, serverName);
-                return playerData;
-            } else {
-                sender.sendMessage(CrescentCoreLocalization.GENERIC_TELEPORTATION_FAILURE.getFormattedMessage(player.locale(), serverName));
-                return null;
-            }
-        });
+        crescentCore.getPlayerDataManager().saveDataAsync(player.getUniqueId()).whenComplete((playerData, error) ->
+                crescentCore.getServer().getScheduler().runTask(crescentCore, () -> {
+                    if (error == null && playerData != null && player.isOnline()) {
+                        BungeeUtils.sendPlayerToServer(crescentCore, player, serverName);
+                    } else {
+                        sender.sendMessage(CrescentCoreLocalization.GENERIC_TELEPORTATION_FAILURE.getFormattedMessage(player.locale(), serverName));
+                    }
+                }));
 
         sender.sendMessage(CrescentCoreLocalization.GENERIC_AWAIT_TELEPORTATION.getFormattedMessage(player.locale(), serverName));
         // If player is still connected to this server five seconds later, send error message
@@ -74,25 +72,25 @@ public class CrescentCoreCommands {
     public void saveCommand(final CommandSender sender) {
         sender.sendMessage(CrescentCoreLocalization.SAVING_PLAYER_DATA.getFormattedMessage(null));
         CompletableFuture<Map<UUID, PlayerData>> futurePlayerMap = crescentCore.getPlayerDataManager().asyncSaveAllData();
-        futurePlayerMap.thenAccept(saveMap -> {
-            TextComponent text;
-            if (!saveMap.isEmpty()) {
-                text = (TextComponent) CrescentCoreLocalization.SAVING_PLAYER_DATA_SUCCESS.getFormattedMessage(null);
-            } else {
-                text = (TextComponent) CrescentCoreLocalization.SAVING_PLAYER_DATA_FAILURE.getFormattedMessage(null);
-            }
+        futurePlayerMap.whenComplete((saveMap, error) -> crescentCore.getServer().getScheduler().runTask(crescentCore, () -> {
+            boolean success = error == null && saveMap != null;
+            TextComponent text = (TextComponent) (success
+                    ? CrescentCoreLocalization.SAVING_PLAYER_DATA_SUCCESS.getFormattedMessage(null)
+                    : CrescentCoreLocalization.SAVING_PLAYER_DATA_FAILURE.getFormattedMessage(null));
             sender.sendMessage(text);
-        });
+        }));
     }
 
     @Command("reload")
     @Permission("crescent.crescentcore.reload")
     public void reloadCommand(final CommandSender sender) {
-        boolean success = crescentCore.getPluginDataManager().reloadAllData();
-        if (success) {
-            sender.sendMessage(CrescentCoreLocalization.RELOADING_DATA_SUCCESS.getFormattedMessage(null));
-        } else {
-            sender.sendMessage(CrescentCoreLocalization.RELOADING_DATA_FAILURE.getFormattedMessage(null));
-        }
+        crescentCore.getPluginDataManager().asyncReloadAllData().whenComplete((success, error) ->
+                crescentCore.getServer().getScheduler().runTask(crescentCore, () -> {
+                    if (error == null && Boolean.TRUE.equals(success)) {
+                        sender.sendMessage(CrescentCoreLocalization.RELOADING_DATA_SUCCESS.getFormattedMessage(null));
+                    } else {
+                        sender.sendMessage(CrescentCoreLocalization.RELOADING_DATA_FAILURE.getFormattedMessage(null));
+                    }
+                }));
     }
 }

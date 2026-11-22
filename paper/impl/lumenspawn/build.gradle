@@ -1,7 +1,7 @@
 description = "Plugin handling mobs with custom stats and behaviors."
 
 dependencies {
-    implementation libs.lumenspawn.api
+    implementation project(':paper:api:lumenspawn')
     compileOnly libs.artifacts.api
     compileOnly libs.crystals.api
     compileOnly libs.crescent.common

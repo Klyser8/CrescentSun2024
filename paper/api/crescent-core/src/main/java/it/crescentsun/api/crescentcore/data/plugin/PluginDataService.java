@@ -84,20 +84,23 @@ public interface PluginDataService {
     }
 
     /**
-     * Asynchronously saves a plugin data instance to the database.
-     * Upon completion, the data instance is stored in SQL and a notification is published so other backends can refresh their caches.
+     * Captures the instance's annotated fields on the Paper server thread, then asynchronously writes
+     * the plain values and a notification-outbox row in one SQL transaction. Core publishes the notification
+     * after commit and retries it from the outbox if publication fails. The future completes exceptionally
+     * if snapshotting, persistence, or the immediate notification attempt fails; a committed write remains durable.
      * @param pluginData The data instance to be saved and synced.
      * @param <T> The type of the data instance.
-     * @return A future that will complete when the data is saved and synced.
+     * @return A future that completes with the original instance after SQL persistence and notification publication succeed.
      */
     <T extends PluginData> CompletableFuture<T> asyncSaveDataAndSync(@NotNull T pluginData);
 
     /**
-     * Asynchronously loads a plugin data instance from the database.
+     * Reads plain database values asynchronously, then constructs and caches the PluginData instance
+     * on the Paper server thread. The future completes exceptionally if the read or materialization fails.
      *
      * @param identifier The identifier of the data instance.
      * @param <T> The type of the data instance.
-     * @return  A future that will complete when the data is loaded.
+     * @return A future that completes with the loaded instance, or {@code null} if no row exists.
      */
     <T extends PluginData> CompletableFuture<T> asyncLoadData(PluginDataIdentifier<T> identifier);
 
@@ -113,11 +116,13 @@ public interface PluginDataService {
     }
 
     /**
-     * Asynchronously deletes a plugin data instance from the database.
-     * Upon completion, the data is deleted from SQL and a notification is published so other backends can evict it from their caches.
+     * Deletes a plugin data instance and enqueues its notification in one SQL transaction, then publishes
+     * the notification so other backends can evict it from their caches. The future completes exceptionally
+     * if the database operation or immediate notification attempt fails. If SQL committed, the local cache
+     * entry is evicted and Core retries publication from the durable outbox.
      * @param identifier The identifier of the data instance.
      * @param <T> The type of the data instance.
-     * @return A future that will complete when the data is deleted and synced.
+     * @return A future that completes when the data is deleted and the notification is published.
      */
     <T extends PluginData> CompletableFuture<PluginDataIdentifier<T>> asyncDeleteDataAndSync(PluginDataIdentifier<T> identifier);
 

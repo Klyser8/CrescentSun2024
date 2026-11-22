@@ -3,7 +3,7 @@ package it.crescentsun.api.crescentcore.data.plugin;
 import it.crescentsun.api.crescentcore.CrescentPlugin;
 import it.crescentsun.api.crescentcore.data.DataType;
 import it.crescentsun.api.crescentcore.data.DataNotFoundException;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.UUID;
@@ -33,6 +33,7 @@ public abstract class PluginData {
     protected transient boolean initialized = false;
 
     protected PluginData() {
+        requireMainThread("construct plugin data");
         // Check that any subclass is annotated with @DatabaseTable
         if (!this.getClass().isAnnotationPresent(DatabaseTable.class)) { //TODO test
             throw new IllegalStateException("Plugin data class " + this.getClass().getName() + " should be annotated with @DatabaseTable!");
@@ -56,6 +57,7 @@ public abstract class PluginData {
      * @param pluginDataService The PluginDataService instance to use for data operations.
      */
     public boolean tryInit() {
+        requireMainThread("initialize plugin data");
         if (shouldInit()) {
             initialized = true;
             if (pluginDataService.getData(this.getClass(), getUuid()) == null) {
@@ -77,38 +79,42 @@ public abstract class PluginData {
      * @throws CompletionException If the data couldn't be saved and synced.
      */
     public CompletableFuture<PluginData> saveAndSync() {
+        requireMainThread("save plugin data");
+        String description = getClass().getName() + "[" + getUuid() + "]";
         return pluginDataService.asyncSaveDataAndSync(this).exceptionally(throwable -> {
-            throw new CompletionException("Couldn't save and sync data " + this, throwable);
+            throw new CompletionException("Couldn't save and sync data " + description, throwable);
         });
     }
 
     /**
      * Deletes this PluginData instance from the database (asynchronously), to then be removed from other servers' repositories as well.
-     * If the data couldn't be deleted and synced, it will be added back to the repository, and an exception will be thrown.
+     * The local repository entry is removed after the database delete commits. Core records the notification
+     * in a durable outbox in that same transaction and retries publication if the immediate Redis publish fails.
      *
      * @return The PluginDataIdentifier of the deleted data.
      * @param <T> The type of the PluginData.
-     * @throws CompletionException If the data couldn't be deleted and synced.
+     * @throws CompletionException If the database delete or immediate notification publication fails. If SQL committed,
+     *                             the local entry is already evicted and the notification remains queued for retry.
      * @throws DataNotFoundException If the data couldn't be found in the repository.
      */
     @SuppressWarnings("unchecked")
     public <T extends PluginData> CompletableFuture<PluginDataIdentifier<T>> deleteAndSync() {
-        // Async delete the data and handle errors
-        PluginDataIdentifier<T> pluginIdentifier = (PluginDataIdentifier<T>) pluginDataService.removeData(this.getClass(), getUuid());
-        if (pluginIdentifier != null ) {
-            return pluginDataService.asyncDeleteDataAndSync(pluginIdentifier).exceptionally(throwable -> {
-                pluginDataService.insertData(getUuid(), this, false);
-                throw new CompletionException("Couldn't delete and sync data " + this, throwable);
-            });
-        } else {
-            throw new DataNotFoundException("Failed to delete data " + this + " from repository.");
+        requireMainThread("delete plugin data from the local repository");
+        PluginDataIdentifier<T> pluginIdentifier = new PluginDataIdentifier<>((Class<T>) this.getClass(), getUuid());
+        String description = getClass().getName() + "[" + pluginIdentifier.uuid() + "]";
+        if (pluginDataService.getData(pluginIdentifier) == null) {
+            throw new DataNotFoundException("Failed to delete data " + description + " from repository.");
         }
+        return pluginDataService.asyncDeleteDataAndSync(pluginIdentifier).exceptionally(throwable -> {
+            throw new CompletionException("Couldn't delete and sync data " + description, throwable);
+        });
     }
 
     /**
      * @return Whether the data instance has been initialized.
      */
     public boolean isInitialized() {
+        requireMainThread("read plugin-data initialization state");
         return initialized;
     }
 
@@ -130,6 +136,7 @@ public abstract class PluginData {
      */
     @ApiStatus.Internal
     public void resolveOwningPlugin() {
+        requireMainThread("resolve a plugin-data owner");
         if (owningPlugin != null) return;
         if (this.getClass().isAnnotationPresent(DatabaseTable.class)) {
             Class<? extends CrescentPlugin> pluginClass = this.getClass()
@@ -145,5 +152,11 @@ public abstract class PluginData {
     @ApiStatus.Internal
     public static void setPluginDataService(PluginDataService pluginDataService) {
         PluginData.pluginDataService = pluginDataService;
+    }
+
+    private static void requireMainThread(String operation) {
+        if (!Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("Cannot " + operation + " off the Paper server thread.");
+        }
     }
 }

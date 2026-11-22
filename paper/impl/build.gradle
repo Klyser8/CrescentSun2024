@@ -17,6 +17,7 @@ def jumpwarps_version = project.findProperty('jumpwarps_version')
 def commandtomes_version = project.findProperty('commandtomes_version')
 def dropnames_version = project.findProperty('dropnames_version')
 def crescentcraft_version = project.findProperty('crescentcraft_version')
+def mobmadness_version = project.findProperty('mobmadness_version')
 
 void addRepositories(Project project) {
     project.repositories {
@@ -36,8 +37,9 @@ subprojects {
     addRepositories(project)
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        toolchain.languageVersion = JavaLanguageVersion.of(25)
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
 
     project.version = [
@@ -49,13 +51,15 @@ subprojects {
             "dropnames"                : dropnames_version,
             "command-tomes"      : commandtomes_version,
             "jumpwarps"                 : jumpwarps_version,
-            "crescentcraft"             : crescentcraft_version
+            "crescentcraft"             : crescentcraft_version,
+            "mob-madness"               : mobmadness_version
     ].get(project.name)
     project.group = "it.crescentsun"
     project.description = project.description ?: "No description provided"
 
     tasks.withType(JavaCompile).configureEach {
         options.encoding = "UTF-8"
+        options.release.set(25)
     }
 
     build {
@@ -106,20 +110,41 @@ subprojects {
         group = 'always-used'
         description = 'Copies the resulting JAR to the appropriate jar directory in the dev server.\n'
 
+        def serverPort = 12622
+        def ip = "crescentsun.it"
+        def destinationDir = "/home/tomrom/crescent-sun/dev/paper-plugins"
+        def jarName = "${project.name}-${version}.jar"
+        def uploadName = ".${jarName}.uploading"
+
         doFirst {
-
-            def jarFile = "${buildDir}/libs/${project.name}-${version}.jar"
-            def serverPort = 12622
-            def ip = "crescentsun.it"
-
-            var destinationDir = "/home/tomrom/crescent-sun/dev/paper-plugins"
+            def jarFile = "${buildDir}/libs/${jarName}"
 
             // Print version
             println "Project: ${project.name}"
             println "Version: ${version}"
 
-            // Delete any files starting with ${project.name} in the subdirectory
-            commandLine 'scp', '-P', "${serverPort}", jarFile, "tomrom@${ip}:${destinationDir}"
+            // Upload under a non-JAR name so Paper cannot discover a partial transfer.
+            commandLine 'scp', '-P', "${serverPort}", jarFile, "tomrom@${ip}:${destinationDir}/${uploadName}"
+        }
+
+        doLast {
+            // Promote the complete upload, then remove older versioned JARs for this plugin.
+            def remoteScript = """
+                set -eu
+                destination='${destinationDir}'
+                mv -- \"\$destination/${uploadName}\" \"\$destination/${jarName}\"
+                find \"\$destination\" -maxdepth 1 -type f -regextype posix-extended \\
+                    -regex \".*/${project.name}-[0-9][0-9A-Za-z._+-]*\\\\.jar\" \\
+                    ! -name '${jarName}' -delete
+            """.stripIndent().trim()
+
+            def sshProcess = new ProcessBuilder(
+                    'ssh', '-p', "${serverPort}", "tomrom@${ip}", remoteScript
+            ).inheritIO().start()
+            def exitCode = sshProcess.waitFor()
+            if (exitCode != 0) {
+                throw new GradleException("Remote plugin JAR replacement failed with exit code ${exitCode}")
+            }
         }
     }
 }

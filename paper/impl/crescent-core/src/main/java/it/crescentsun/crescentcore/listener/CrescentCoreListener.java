@@ -30,7 +30,9 @@ import org.bukkit.potion.PotionEffectType;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -62,25 +64,23 @@ public class CrescentCoreListener implements Listener {
     }
 
     private void loadPlayerDataAsync(Player player) {
-        crescentCore.getPlayerDataManager().loadDataAsync(player.getUniqueId()).thenAcceptAsync(playerData -> {
-            if (playerData == null) {
-                return;
-            }
-            PlayerJoinEventPostDBLoad dataLoadedEvent = new PlayerJoinEventPostDBLoad(player, playerData);
-            Bukkit.getScheduler().callSyncMethod(crescentCore, () -> {
-                Bukkit.getPluginManager().callEvent(dataLoadedEvent);
-                return null;
-            });
-            // Set player's username
-            playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_USERNAME, player.getName());
-            // Check if the server is a lobby server
-            Optional<Timestamp> firstLogin = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_FIRST_LOGIN);
-            Optional<Timestamp> lastSeen = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_LAST_SEEN);
-            if (firstLogin.equals(lastSeen)) {
-                Bukkit.broadcast(MessageFormatter.parse(
-                        "<@green><b>Welcome to the Crescent Sun Network,</@> <@aqua>" + player.getName() + "</@>!</b>"));
-            }
-        });
+        crescentCore.getPlayerDataManager().loadDataAsync(player.getUniqueId()).whenComplete((playerData, error) ->
+                Bukkit.getScheduler().runTask(crescentCore, () -> {
+                    if (error != null) {
+                        crescentCore.getLogger().severe("Could not load player data for " + player.getUniqueId() + ": " + error.getMessage());
+                        return;
+                    }
+                    if (playerData == null || !player.isOnline()) return;
+
+                    Bukkit.getPluginManager().callEvent(new PlayerJoinEventPostDBLoad(player, playerData));
+                    playerData.updateDataValue(DatabaseNamespacedKeys.PLAYER_USERNAME, player.getName());
+                    Optional<Timestamp> firstLogin = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_FIRST_LOGIN);
+                    Optional<Timestamp> lastSeen = playerData.getDataValue(DatabaseNamespacedKeys.PLAYER_LAST_SEEN);
+                    if (firstLogin.equals(lastSeen)) {
+                        Bukkit.broadcast(MessageFormatter.parse(
+                                "<@green><b>Welcome to the Crescent Sun Network,</@> <@aqua>" + player.getName() + "</@>!</b>"));
+                    }
+                }));
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -124,17 +124,16 @@ public class CrescentCoreListener implements Listener {
         }
 
         crescentCore.getPlayerDataManager().updatePlayerSessionData(player);
-        crescentCore.getPlayerDataManager().saveDataAsync(player.getUniqueId()).thenAcceptAsync(pData -> {
-            if (pData == null) {
-                return;
-            }
-            PlayerDataSavedPostQuitEvent dataSavedEvent = new PlayerDataSavedPostQuitEvent(player, pData);
-            Bukkit.getScheduler().callSyncMethod(crescentCore, () -> {
-                Bukkit.getPluginManager().callEvent(dataSavedEvent);
-                return null;
-            });
-            crescentCore.getPlayerDataManager().removeData(player.getUniqueId());
-        });
+        crescentCore.getPlayerDataManager().saveDataAsync(player.getUniqueId()).whenComplete((pData, error) ->
+                Bukkit.getScheduler().runTask(crescentCore, () -> {
+                    if (error != null) {
+                        crescentCore.getLogger().severe("Could not save player data for " + player.getUniqueId() + ": " + error.getMessage());
+                        return;
+                    }
+                    if (pData == null) return;
+                    Bukkit.getPluginManager().callEvent(new PlayerDataSavedPostQuitEvent(player, pData));
+                    crescentCore.getPlayerDataManager().removeData(player.getUniqueId());
+                }));
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -168,14 +167,22 @@ public class CrescentCoreListener implements Listener {
         crescentCore.getPlayerDataManager().init();
         crescentCore.getPluginDataManager().init();
         crescentCore.getMessagingService().subscribe(crescentCore::receivePluginDataChange);
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            crescentCore.getPlayerDataManager().loadData(player.getUniqueId());
-        }
-        crescentCore.getPluginDataManager().loadAllData();
-        DataLoadedEvent dataLoadedEvent = new DataLoadedEvent(event.getType()); // plugin data service is needed here.
-        Bukkit.getPluginManager().callEvent(dataLoadedEvent);
-        // Retain the existing extension callback until plugins migrate away from proxy terminology.
-        Bukkit.getPluginManager().callEvent(new ProxyConnectedEvent());
+        crescentCore.getPluginDataManager().startOutboxDispatcher();
+        List<CompletableFuture<PlayerData>> playerLoads = Bukkit.getOnlinePlayers().stream()
+                .map(player -> crescentCore.getPlayerDataManager().loadDataAsync(player.getUniqueId()))
+                .toList();
+        CompletableFuture.allOf(playerLoads.toArray(CompletableFuture[]::new))
+                .thenCompose(ignored -> crescentCore.getPluginDataManager().asyncLoadAllData())
+                .thenAccept(ignored -> {
+                    Bukkit.getPluginManager().callEvent(new DataLoadedEvent(event.getType()));
+                    // Retain the existing extension callback until plugins migrate away from proxy terminology.
+                    Bukkit.getPluginManager().callEvent(new ProxyConnectedEvent());
+                })
+                .whenComplete((ignored, error) -> {
+                    if (error != null) {
+                        crescentCore.getLogger().severe("Initial data loading failed: " + error.getMessage());
+                    }
+                });
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

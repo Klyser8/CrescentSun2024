@@ -242,7 +242,8 @@ public class VaultData extends PluginData {
     @Override
     public <T extends PluginData> CompletableFuture<PluginDataIdentifier<T>> deleteAndSync() {
         CompletableFuture<PluginDataIdentifier<T>> pluginDataIdentifierCompletableFuture = super.deleteAndSync();
-        pluginDataIdentifierCompletableFuture.thenAccept(pluginDataIdentifier -> stopTask());
+        pluginDataIdentifierCompletableFuture.thenAccept(pluginDataIdentifier ->
+                Bukkit.getScheduler().runTask(owningPlugin, this::stopTask));
         return pluginDataIdentifierCompletableFuture;
     }
 

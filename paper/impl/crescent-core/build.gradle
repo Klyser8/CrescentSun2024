@@ -3,7 +3,7 @@ description = "Core plugin for Crescent Sun Network"
 dependencies {
     implementation libs.hikari.cp
     implementation libs.lettuce
-    implementation libs.crescent.core.api // The plugin which populates the API must always implement its own API, and depending plugins should have it in compileOnly.
+    implementation project(":paper:api:crescent-core") // Crescent Core implements the API built in this repository.
     implementation libs.crescentmsg
     implementation libs.crescent.common
 }

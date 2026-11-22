@@ -7,7 +7,6 @@ import it.crescentsun.api.crescentcore.data.player.PlayerData;
 import it.crescentsun.api.crescentcore.data.player.PlayerDataService;
 import it.crescentsun.api.crescentcore.util.TableNameUtil;
 import it.crescentsun.crescentcore.CrescentCore;
-import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -18,8 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerDataManager implements PlayerDataService {
-    private final Map<String, String> INSERT_OR_UPDATE_PLAYER_DATA_QUERIES = new HashMap<>();
-    private final Map<String, String> SELECT_PLAYER_DATA_QUERIES = new HashMap<>();
+    private volatile Map<String, PlayerDataTableSchema> schemasByTable = Map.of();
 
     private final Map<UUID, PlayerData> repository = new ConcurrentHashMap<>();
 
@@ -38,84 +36,70 @@ public class PlayerDataManager implements PlayerDataService {
     }
 
     public void init() {
-        populatePlayerDataQueries();
-        populateSelectPlayerDataQueries();
+        Map<String, PlayerDataTableSchema> schemas = new LinkedHashMap<>();
+        for (String tableName : dbManager.getPlayerTableNames()) {
+            String pluginName = TableNameUtil.extractPluginNameFromPlayerDataTable(tableName);
+            List<PlayerDataColumn> columns = new ArrayList<>();
+            List<PlayerDataColumn> persistentColumns = new ArrayList<>();
+            for (Map.Entry<NamespacedKey, DataDefinition<?>> entry :
+                    crescentCore.getPlayerDataRegistry().getPlayerDataDefinitionsForPlugin(pluginName).entrySet()) {
+                PlayerDataColumn column = new PlayerDataColumn(
+                        entry.getKey(), entry.getKey().getKey(), entry.getValue());
+                columns.add(column);
+                if (entry.getValue().isPersistent()) persistentColumns.add(column);
+            }
+
+            String selectColumns = columns.stream().map(PlayerDataColumn::columnName)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            String selectQuery = "SELECT player_uuid"
+                    + (selectColumns.isEmpty() ? "" : ", " + selectColumns)
+                    + " FROM " + tableName + " WHERE player_uuid = ?";
+            String upsertQuery = buildPlayerUpsertQuery(tableName, persistentColumns);
+            schemas.put(tableName, new PlayerDataTableSchema(tableName,
+                    List.copyOf(columns), List.copyOf(persistentColumns), upsertQuery, selectQuery));
+        }
+        schemasByTable = Collections.unmodifiableMap(schemas);
     }
 
     @Override
     public PlayerData getData(UUID uuid) {
+        requireMainThread("read the player-data repository");
         return repository.get(uuid);
     }
 
     @Override
     public List<PlayerData> getAllData() {
-        return (List<PlayerData>) repository.values();
+        requireMainThread("read the player-data repository");
+        return List.copyOf(repository.values());
     }
 
     @Override
     public CompletableFuture<PlayerData> saveDataAsync(UUID dataKey) {
-        return CompletableFuture.supplyAsync(() -> saveData(dataKey)).exceptionally(e -> {
-            crescentCore.getLogger().severe("An error occurred while saving player data: " + e.getMessage());
-            e.printStackTrace();
-            return null;
+        return onMainThread(() -> captureSaveSnapshot(dataKey)).thenCompose(snapshot -> {
+            if (snapshot == null) return CompletableFuture.completedFuture(null);
+            return dbManager.executeAsync(() -> {
+                persistPlayerSnapshot(snapshot);
+                return snapshot.uuid();
+            }).thenCompose(uuid -> onMainThread(() -> repository.get(uuid)));
         });
     }
 
     @Override
     public CompletableFuture<PlayerData> loadDataAsync(UUID dataKey) {
-        return CompletableFuture.supplyAsync(() -> loadData(dataKey)).exceptionally(e -> {
-            crescentCore.getLogger().severe("An error occurred while loading player data: " + e.getMessage());
-            return null;
-        });
+        return dbManager.executeAsync(() -> readPlayerDataValues(dataKey))
+                .thenCompose(values -> onMainThread(() -> installPlayerData(dataKey, values)));
     }
 
-    private void populatePlayerDataQueries() {
-        for (String tableName : crescentCore.getDatabaseManager().getPlayerTableNames()) {
-            String pluginName = TableNameUtil.extractPluginNameFromPlayerDataTable(tableName);
-            String primaryKey = "player_uuid";
-            String query = "INSERT INTO %TABLENAME% (" + primaryKey + ", %COLUMN_LIST%) VALUES (?, %VALUE_PLACEHOLDERS%)" +
-                    " ON DUPLICATE KEY UPDATE" +
-                    " %ITERATE_COLUMNS%";
-            query = query.replace("%TABLENAME%", tableName);
-            StringBuilder columns = new StringBuilder();
-            StringBuilder columnList = new StringBuilder();
-            Map<NamespacedKey, DataDefinition<?>> playerDataDefinitions =
-                    crescentCore.getPlayerDataRegistry().getPlayerDataDefinitionsForPlugin(pluginName);
-            // Iterate through the definitions to include only persistent columns
-            int persistentCount = 0;
-            for (Map.Entry<NamespacedKey, DataDefinition<?>> entry : playerDataDefinitions.entrySet()) {
-                DataDefinition<?> dataDefinition = entry.getValue();
-                if (!dataDefinition.isPersistent()) {
-                    continue;
-                }
-                String columnName = entry.getKey().getKey();
-                columns.append(columnName).append(" = VALUES(").append(columnName).append("), ");
-                columnList.append(columnName).append(", ");
-                persistentCount++;
-            }
-            // Handle case where there are no persistent columns
-            if (persistentCount == 0) {
-                // Skip adding query if there are no persistent columns
-                continue;
-            }
-            query = query.replace("%COLUMN_LIST%", columnList.toString().trim().replaceAll(",$", ""));
-            query = query.replace("%VALUE_PLACEHOLDERS%", StringUtils.repeat(
-                    "?, ", persistentCount).trim().replaceAll(",$", ""));
-            query = query.replace("%ITERATE_COLUMNS%", columns.toString().trim().replaceAll(",$", ""));
-            INSERT_OR_UPDATE_PLAYER_DATA_QUERIES.put(tableName, query);
-        }
-    }
-
-
-    private void populateSelectPlayerDataQueries() {
-        for (String namespace : crescentCore.getDatabaseManager().getPlayerTableNames()) {
-            String primaryKey = "player_uuid";
-            // Start building the SELECT query
-            String query = "SELECT * FROM %TABLENAME% WHERE " + primaryKey + " = ?";
-
-            // Finalize the query by replacing placeholders
-            SELECT_PLAYER_DATA_QUERIES.put(namespace, query.replace("%TABLENAME%", namespace));
-        }
+    private static String buildPlayerUpsertQuery(String tableName, List<PlayerDataColumn> columns) {
+        if (columns.isEmpty()) return null;
+        String columnNames = columns.stream().map(PlayerDataColumn::columnName)
+                .collect(java.util.stream.Collectors.joining(", "));
+        String placeholders = String.join(", ", Collections.nCopies(columns.size(), "?"));
+        String updates = columns.stream()
+                .map(column -> column.columnName() + " = VALUES(" + column.columnName() + ")")
+                .collect(java.util.stream.Collectors.joining(", "));
+        return "INSERT INTO " + tableName + " (player_uuid, " + columnNames + ") VALUES (?, " + placeholders + ")"
+                + " ON DUPLICATE KEY UPDATE " + updates;
     }
 
     /**
@@ -125,33 +109,11 @@ public class PlayerDataManager implements PlayerDataService {
      * @return The saved PlayerData instance.
      */
     public PlayerData saveData(UUID uuid) {
-        long startTime = System.currentTimeMillis();
-        PlayerData playerData = repository.get(uuid);
-        if (playerData == null) {
-            crescentCore.getLogger().warning("Player data for UUID " + uuid + " not found. Cannot save data.");
-            return null;
-        }
-        try (Connection connection = dbManager.getConnection()) {
-            connection.setAutoCommit(false);
-            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-            try {
-                prepareAndExecuteSaveStatement(uuid, connection, playerData);
-                connection.commit();
-                crescentCore.getLogger().info("Player data saved for UUID: " + uuid);
-            } catch (SQLException e) {
-                connection.rollback();
-                throw e;
-            } finally {
-                connection.setAutoCommit(true); // Restore autocommit mode
-            }
-        } catch (SQLException e) {
-            crescentCore.getLogger().severe("An error occurred while saving player data for " + playerData.getPlayer().getName() + ": " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Error occurred while processing database operation", e);
-        }
-        long timeElapsed = System.currentTimeMillis() - startTime;
-        crescentCore.getLogger().info("Player [" + Bukkit.getOfflinePlayer(uuid).getName() + "] data saved in: " + timeElapsed + "ms");
-        return playerData;
+        requireMainThread("save player data synchronously");
+        PlayerDataSaveSnapshot snapshot = captureSaveSnapshot(uuid);
+        if (snapshot == null) return null;
+        persistPlayerSnapshot(snapshot);
+        return repository.get(uuid);
     }
 
     /**
@@ -164,40 +126,31 @@ public class PlayerDataManager implements PlayerDataService {
      * @see #asyncSaveAllData()
      */
     public Map<UUID, PlayerData> saveAllData() {
-        long startTime = System.currentTimeMillis();
-        Map<UUID, PlayerData> savedData = new HashMap<>();
-        try (Connection connection = dbManager.getConnection()) {
-            connection.setAutoCommit(false); // Start transaction
-            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-            try {
-                for (UUID dataKey : repository.keySet()) {
-                    PlayerData playerData = repository.get(dataKey);
-                    prepareAndExecuteSaveStatement(dataKey, connection, playerData);
-                    savedData.put(dataKey, playerData);
-                }
-                connection.commit();
-            } catch (SQLException e) {
-                connection.rollback();
-                throw e;
-            } finally {
-                connection.setAutoCommit(true); // Restore autocommit mode
-            }
-        } catch (SQLException e) {
-            crescentCore.getLogger().severe("An error occurred while saving all player data: " + e.getMessage());
-            e.printStackTrace(); // Log the full stack trace
-            throw new RuntimeException("Error occurred while processing database operation", e);
+        requireMainThread("save all player data synchronously");
+        List<PlayerDataSaveSnapshot> snapshots = captureAllSaveSnapshots();
+        persistPlayerSnapshots(snapshots);
+        Map<UUID, PlayerData> saved = new HashMap<>();
+        for (PlayerDataSaveSnapshot snapshot : snapshots) {
+            PlayerData playerData = repository.get(snapshot.uuid());
+            if (playerData != null) saved.put(snapshot.uuid(), playerData);
         }
-        long timeElapsed = System.currentTimeMillis() - startTime;
-        crescentCore.getLogger().info("All player data saved in: " + timeElapsed + "ms");
-        return savedData;
+        return Map.copyOf(saved);
     }
 
     public CompletableFuture<Map<UUID, PlayerData>> asyncSaveAllData() {
-        return CompletableFuture.supplyAsync(this::saveAllData).exceptionally(e -> {
-            crescentCore.getLogger().severe("An error occurred while saving all player data: " + e.getMessage());
-            e.printStackTrace();
-            return null;
-        });
+        return onMainThread(this::captureAllSaveSnapshots)
+                .thenCompose(snapshots -> dbManager.executeAsync(() -> {
+                    persistPlayerSnapshots(snapshots);
+                    return snapshots.stream().map(PlayerDataSaveSnapshot::uuid).toList();
+                }))
+                .thenCompose(uuids -> onMainThread(() -> {
+                    Map<UUID, PlayerData> saved = new HashMap<>();
+                    for (UUID uuid : uuids) {
+                        PlayerData playerData = repository.get(uuid);
+                        if (playerData != null) saved.put(uuid, playerData);
+                    }
+                    return Map.copyOf(saved);
+                }));
     }
 
     /**
@@ -208,33 +161,24 @@ public class PlayerDataManager implements PlayerDataService {
      * @return The loaded PlayerData instance, or null if the player data is not found.
      */
     public PlayerData loadData(UUID uuid) {
-        long startTime = System.currentTimeMillis();
-        Player player = Bukkit.getPlayer(uuid);
-        if (player == null) {
-            crescentCore.getLogger().warning("Player with UUID " + uuid + " is not online. Cannot load data.");
-            return null;
-        }
+        requireMainThread("load player data synchronously");
+        return installPlayerData(uuid, readPlayerDataValues(uuid));
+    }
+
+    private Map<NamespacedKey, Object> readPlayerDataValues(UUID uuid) {
         Map<NamespacedKey, Object> databaseValues = new HashMap<>();
         try (Connection connection = dbManager.getConnection()) {
-            for (String tableName : dbManager.getPlayerTableNames()) {
-                String pluginName = TableNameUtil.extractPluginNameFromPlayerDataTable(tableName);
-                String query = SELECT_PLAYER_DATA_QUERIES.get(tableName);
-                if (query == null) {
-                    crescentCore.getLogger().warning("No SELECT query found for table " + tableName);
-                    continue;
-                }
-                try (PreparedStatement statement = connection.prepareStatement(query)) {
+            for (PlayerDataTableSchema schema : schemasByTable.values()) {
+                try (PreparedStatement statement = connection.prepareStatement(schema.selectQuery())) {
                     statement.setString(1, uuid.toString());
                     try (ResultSet result = statement.executeQuery()) {
                         if (result.next()) {
-                            for (NamespacedKey namespacedKey : crescentCore.getPlayerDataRegistry().getPlayerDataDefinitionsForPlugin(pluginName).keySet()) {
-                                DataDefinition<?> dataDefinition = crescentCore.getPlayerDataRegistry().getPlayerDataDefinitionsForPlugin(pluginName).get(namespacedKey);
-                                String columnName = namespacedKey.getKey();
-                                Object value = result.getObject(columnName);
+                            for (PlayerDataColumn column : schema.columns()) {
+                                Object value = result.getObject(column.columnName());
                                 if (value == null) {
-                                    databaseValues.put(namespacedKey, dataDefinition.getDefaultValue());
+                                    databaseValues.put(column.key(), column.definition().getDefaultValue());
                                 } else {
-                                    databaseValues.put(namespacedKey, value);
+                                    databaseValues.put(column.key(), value);
                                 }
                             }
                         }
@@ -243,25 +187,25 @@ public class PlayerDataManager implements PlayerDataService {
             }
 
         } catch (SQLException e) {
-            crescentCore.getLogger().severe("An error occurred while loading data for player " + player.getName() + ": " + e.getMessage());
-            e.printStackTrace(); // Log the full stack trace
-            throw new RuntimeException("Error occurred while processing database operation", e);
+            throw new IllegalStateException("Failed to read player data for " + uuid + " from the database.", e);
+        }
+        return databaseValues;
+    }
+
+    private PlayerData installPlayerData(UUID uuid, Map<NamespacedKey, Object> databaseValues) {
+        requireMainThread("publish loaded player data");
+        Player player = Bukkit.getPlayer(uuid);
+        if (player == null) {
+            crescentCore.getLogger().warning("Player with UUID " + uuid + " is no longer online. Skipping data load.");
+            return null;
         }
 
-        PlayerData playerData;
-
-        //crystals:crystals exists, so crescentcore:* doesn't get created.
-
-        if (databaseValues.isEmpty()) {
-            playerData = new PlayerData(player, databaseValues, crescentCore.getPlayerDataRegistry());
-            crescentCore.getLogger().info("Player UUID " + uuid + " is new!");
-        } else {
-            playerData = new PlayerData(player, databaseValues, crescentCore.getPlayerDataRegistry());
-        }
-
+        PlayerData playerData = new PlayerData(player, databaseValues, crescentCore.getPlayerDataRegistry());
         repository.put(uuid, playerData);
-        long timeElapsed = System.currentTimeMillis() - startTime;
-        crescentCore.getLogger().info("Player [" + player.getName() + "] ( " + player.getUniqueId() + ") data loaded in: " + timeElapsed + "ms");
+        if (databaseValues.isEmpty()) {
+            crescentCore.getLogger().info("Player UUID " + uuid + " is new!");
+        }
+        crescentCore.getLogger().info("Player [" + player.getName() + "] (" + uuid + ") data loaded.");
         return playerData;
     }
 
@@ -272,6 +216,7 @@ public class PlayerDataManager implements PlayerDataService {
      * @return A list of loaded PlayerData instances.
      */
     public List<PlayerData> loadAllData() {
+        requireMainThread("load all player data synchronously");
         List<PlayerData> loadedData = new ArrayList<>();
         long startTime = System.currentTimeMillis();
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -287,39 +232,93 @@ public class PlayerDataManager implements PlayerDataService {
     }
 
 
-    private void prepareAndExecuteSaveStatement(UUID dataKey, Connection connection, PlayerData playerData) throws SQLException {
-        for (String tableName : dbManager.getPlayerTableNames()) {
-            String pluginName = TableNameUtil.extractPluginNameFromPlayerDataTable(tableName);
-            String query = INSERT_OR_UPDATE_PLAYER_DATA_QUERIES.get(tableName);
+    private PlayerDataSaveSnapshot captureSaveSnapshot(UUID uuid) {
+        requireMainThread("snapshot player data for saving");
+        PlayerData playerData = repository.get(uuid);
+        if (playerData == null) {
+            crescentCore.getLogger().warning("Player data for UUID " + uuid + " not found. Cannot save data.");
+            return null;
+        }
+        return new PlayerDataSaveSnapshot(uuid, playerData.snapshotValuesForPersistence());
+    }
+
+    private List<PlayerDataSaveSnapshot> captureAllSaveSnapshots() {
+        requireMainThread("snapshot all player data for saving");
+        List<PlayerDataSaveSnapshot> snapshots = new ArrayList<>();
+        repository.forEach((uuid, playerData) -> snapshots.add(
+                new PlayerDataSaveSnapshot(uuid, playerData.snapshotValuesForPersistence())));
+        return List.copyOf(snapshots);
+    }
+
+    private void persistPlayerSnapshot(PlayerDataSaveSnapshot snapshot) {
+        long startTime = System.currentTimeMillis();
+        try (Connection connection = dbManager.getConnection()) {
+            connection.setAutoCommit(false);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try {
+                prepareAndExecuteSaveStatement(snapshot, connection);
+                connection.commit();
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to save player data for " + snapshot.uuid() + ".", e);
+        }
+        crescentCore.getLogger().info("Player data saved for UUID " + snapshot.uuid() + " in "
+                + (System.currentTimeMillis() - startTime) + "ms");
+    }
+
+    private void persistPlayerSnapshots(List<PlayerDataSaveSnapshot> snapshots) {
+        long startTime = System.currentTimeMillis();
+        try (Connection connection = dbManager.getConnection()) {
+            connection.setAutoCommit(false);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try {
+                for (PlayerDataSaveSnapshot snapshot : snapshots) {
+                    prepareAndExecuteSaveStatement(snapshot, connection);
+                }
+                connection.commit();
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to save all player data.", e);
+        }
+        crescentCore.getLogger().info("All player data saved in " + (System.currentTimeMillis() - startTime) + "ms");
+    }
+
+    private void prepareAndExecuteSaveStatement(PlayerDataSaveSnapshot snapshot, Connection connection) throws SQLException {
+        for (PlayerDataTableSchema schema : schemasByTable.values()) {
+            String query = schema.upsertQuery();
             if (query == null) {
                 continue;
             }
             try (PreparedStatement statement = connection.prepareStatement(query)) {
-                Set<NamespacedKey> namespacedKeys = crescentCore.getPlayerDataRegistry().getPlayerDataDefinitionsForPlugin(pluginName).keySet();
                 int index = 1;
-                statement.setString(index++, dataKey.toString()); // Set player UUID
-                for (NamespacedKey namespacedKey : namespacedKeys) {
-                    DataDefinition<?> dataDefinition = crescentCore.getPlayerDataRegistry().getPlayerDataDefinitionsForPlugin(pluginName).get(namespacedKey);
-                    // Skip non-persistent data
-                    try {
-                        statement.setObject(index++, playerData.getDataValue(namespacedKey).orElse(dataDefinition.getDefaultValue()));
-                    } catch (SQLException e) {
-                        crescentCore.getLogger().severe("An error occurred while setting value for " + namespacedKey + ": " + e.getMessage());
-                        throw new RuntimeException(e);
-                    }
+                statement.setString(index++, snapshot.uuid().toString());
+                for (PlayerDataColumn column : schema.persistentColumns()) {
+                    statement.setObject(index++, snapshot.values().get(column.key()));
                 }
-                statement.executeUpdate(); // Execute the prepared statement for each player's player data
+                statement.executeUpdate();
             }
         }
     }
 
     @Override
     public PlayerData removeData(UUID uuid) {
+        requireMainThread("remove player data from the repository");
         return repository.remove(uuid);
     }
 
     @Override
     public void deleteData(UUID uuid) {
+        requireMainThread("delete player data synchronously");
         try (Connection connection = dbManager.getConnection()) {
             connection.setAutoCommit(false);
             connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
@@ -342,13 +341,12 @@ public class PlayerDataManager implements PlayerDataService {
                 connection.setAutoCommit(true);
             }
         } catch (SQLException e) {
-            crescentCore.getLogger().severe("An error occurred while deleting " + Bukkit.getPlayer(uuid).getName() +  "'s data: " + e.getMessage());
-            e.printStackTrace(); // Log the full stack trace
-            throw new RuntimeException("Error occurred while processing database operation", e);
+            throw new IllegalStateException("Failed to delete player data for " + uuid + ".", e);
         }
     }
 
     public void updatePlayerSessionData(Player player) {
+        requireMainThread("update player session data");
         PlayerData playerData = getData(player.getUniqueId());
         if (playerData == null) {
             // Handle the case where playerData is not available
@@ -379,5 +377,44 @@ public class PlayerDataManager implements PlayerDataService {
             lockStatement.executeQuery();
         }
     }
+
+    private <T> CompletableFuture<T> onMainThread(java.util.function.Supplier<T> operation) {
+        if (Bukkit.isPrimaryThread()) {
+            try {
+                return CompletableFuture.completedFuture(operation.get());
+            } catch (Throwable error) {
+                return CompletableFuture.failedFuture(error);
+            }
+        }
+
+        CompletableFuture<T> future = new CompletableFuture<>();
+        try {
+            Bukkit.getScheduler().runTask(crescentCore, () -> {
+                try {
+                    future.complete(operation.get());
+                } catch (Throwable error) {
+                    future.completeExceptionally(error);
+                }
+            });
+        } catch (RuntimeException error) {
+            future.completeExceptionally(error);
+        }
+        return future;
+    }
+
+    private static void requireMainThread(String operation) {
+        if (!Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("Cannot " + operation + " off the Paper server thread.");
+        }
+    }
+
+    private record PlayerDataSaveSnapshot(UUID uuid, Map<NamespacedKey, Object> values) { }
+
+    private record PlayerDataColumn(NamespacedKey key, String columnName,
+                                    DataDefinition<?> definition) { }
+
+    private record PlayerDataTableSchema(String tableName, List<PlayerDataColumn> columns,
+                                         List<PlayerDataColumn> persistentColumns,
+                                         String upsertQuery, String selectQuery) { }
 
 }

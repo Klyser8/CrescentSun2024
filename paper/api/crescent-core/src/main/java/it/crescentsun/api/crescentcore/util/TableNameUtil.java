@@ -5,6 +5,8 @@ import it.crescentsun.api.crescentcore.data.plugin.DatabaseTable;
 import it.crescentsun.api.crescentcore.data.plugin.PluginData;
 import org.bukkit.Bukkit;
 
+import java.util.Locale;
+
 public class TableNameUtil {
 
     /**
@@ -19,7 +21,7 @@ public class TableNameUtil {
             new Exception().printStackTrace();
             return pluginName;
         }
-        return "player_data_" + pluginName.toLowerCase();
+        return "player_data_" + pluginName.toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -33,8 +35,8 @@ public class TableNameUtil {
             throw new IllegalArgumentException("Plugin data class " + dataClass.getName() + " does not have a DatabaseTable annotation!");
         }
         DatabaseTable annotation = dataClass.getAnnotation(DatabaseTable.class);
-        String pluginName = annotation.plugin().getSimpleName().toLowerCase().replace(" ", "_");
-        String tableName = annotation.tableName().toLowerCase();
+        String pluginName = annotation.plugin().getSimpleName().toLowerCase(Locale.ROOT).replace(" ", "_");
+        String tableName = annotation.tableName().toLowerCase(Locale.ROOT);
         return pluginName + "_" + tableName;
     }
 

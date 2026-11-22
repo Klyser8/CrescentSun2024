@@ -15,6 +15,8 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
+import java.sql.Timestamp;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +35,7 @@ public class PlayerData {
     private final Player player;
 
     public PlayerData(Player player, Map<NamespacedKey, Object> databaseValues, PlayerDataRegistryService registry) {
+        requireMainThread("construct PlayerData");
         this.player = player;
 
         for (Map.Entry<NamespacedKey, DataDefinition<?>> entry : registry.getRegistry().entrySet()) {
@@ -45,7 +48,7 @@ public class PlayerData {
     }
 
     /**
-     * @return The unique ID of the player.
+ * @return The unique ID of the player.
      */
     public UUID getUniqueId() {
         return (UUID) getDataValue(DatabaseNamespacedKeys.PLAYER_UUID)
@@ -68,14 +71,16 @@ public class PlayerData {
      * @param namespacedKey The namespaced key of the data to retrieve
      * @return An Optional containing the value of the additional data with the given namespaced key, or an empty Optional if there were issues retrieving the data.
      * @param <V> The type of the data.
+     * @throws IllegalStateException if called off the Paper server thread
      */
     @NotNull public <V> Optional<V> getDataValue(NamespacedKey namespacedKey) {
+        requireMainThread("read player data");
         DataEntry<?> data = playerDataEntries.get(namespacedKey);
         if (data == null) {
             throw new DataNotFoundException("Player data [" + namespacedKey.namespace() + ":" + namespacedKey.value() + "] not found when retrieving!");
         }
         V value = castDataValue(namespacedKey, data);
-        PlayerDataFetchEvent<V> event = new PlayerDataFetchEvent<>(this, namespacedKey, value, !Bukkit.isPrimaryThread());
+        PlayerDataFetchEvent<V> event = new PlayerDataFetchEvent<>(this, namespacedKey, value, false);
         event.callEvent();
         return Optional.ofNullable(event.getValue());
     }
@@ -91,8 +96,10 @@ public class PlayerData {
      * @param namespacedKey The namespaced key of the data to update
      * @param value The new value to set. Must be of the same type as the original value.
      * @param <V> The type of the data.
+     * @throws IllegalStateException if called off the Paper server thread
      */
     public <V> void updateDataValue(NamespacedKey namespacedKey, V value) {
+        requireMainThread("update player data");
         DataEntry<?> data = playerDataEntries.get(namespacedKey);
         if (data == null) {
             throw new DataNotFoundException("Player data [" + namespacedKey.namespace() + ":" + namespacedKey.value() + "] not found when updating!");
@@ -101,7 +108,9 @@ public class PlayerData {
         Class<?> expectedClass = data.getType().getTypeClass();
         Object newValue = value;
 
-        if (!expectedClass.isInstance(value)) {
+        if (value == null && isNullable(data.getType())) {
+            newValue = null;
+        } else if (!expectedClass.isInstance(value)) {
             // Handle numeric type conversions
             if (Number.class.isAssignableFrom(expectedClass) && value instanceof Number) {
                 newValue = convertNumber((Number) value, expectedClass);
@@ -110,7 +119,7 @@ public class PlayerData {
             }
         }
 
-        PlayerDataUpdateEvent event = new PlayerDataUpdateEvent(this, namespacedKey, newValue, !Bukkit.isPrimaryThread());
+        PlayerDataUpdateEvent event = new PlayerDataUpdateEvent(this, namespacedKey, newValue, false);
         event.callEvent();
         if (!event.isCancelled()) {
             data.setValue(event.getValue());
@@ -122,6 +131,10 @@ public class PlayerData {
     private <V> V castDataValue(NamespacedKey namespacedKey, DataEntry<?> data) {
         Object rawValue = data.getValue();
         Class<?> expectedClass = data.getType().getTypeClass();
+
+        if (rawValue == null && isNullable(data.getType())) {
+            return null;
+        }
 
         if (!expectedClass.isInstance(rawValue)) {
             // Handle numeric type conversions
@@ -157,11 +170,18 @@ public class PlayerData {
         }
     }
 
+    private static boolean isNullable(DataType type) {
+        return type == DataType.NULLABLE_VARCHAR_16
+                || type == DataType.NULLABLE_VARCHAR_36
+                || type == DataType.NULLABLE_VARCHAR_255;
+    }
+
 
     /**
      * @return The player object associated with this data.
      */
     public Player getPlayer() {
+        requireMainThread("access the associated Bukkit player");
         return player;
     }
 
@@ -170,7 +190,29 @@ public class PlayerData {
      * @return an immutable version of the player data registry.
      */
     public Map<NamespacedKey, DataEntry<?>> getAllDataEntries() {
+        requireMainThread("inspect player data entries");
         return Map.copyOf(playerDataEntries);
+    }
+
+    /** Returns a stable value snapshot for database persistence without firing data-fetch events. */
+    @ApiStatus.Internal
+    public Map<NamespacedKey, Object> snapshotValuesForPersistence() {
+        requireMainThread("snapshot player data for persistence");
+        Map<NamespacedKey, Object> snapshot = new HashMap<>();
+        playerDataEntries.forEach((key, entry) -> {
+            Object value = entry.getValue();
+            if (value instanceof Timestamp timestamp) {
+                value = new Timestamp(timestamp.getTime());
+            }
+            snapshot.put(key, value);
+        });
+        return Collections.unmodifiableMap(snapshot);
+    }
+
+    private static void requireMainThread(String operation) {
+        if (!Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("Cannot " + operation + " off the Paper server thread.");
+        }
     }
 
 }

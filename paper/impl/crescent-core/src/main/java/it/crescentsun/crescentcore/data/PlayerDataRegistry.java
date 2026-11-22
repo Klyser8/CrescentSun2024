@@ -17,9 +17,10 @@ import java.util.*;
 public final class PlayerDataRegistry implements PlayerDataRegistryService {
 
     public PlayerDataRegistry() {}
-    private boolean isFrozen = false;
+    private volatile boolean isFrozen = false;
     //Namespace is the table name (plugin name), key is the column name, and the DataEntry (value) is the data.
-    private final Map<NamespacedKey, DataDefinition<?>> playerDataRegistry = new HashMap<>();
+    private volatile Map<NamespacedKey, DataDefinition<?>> playerDataRegistry = new LinkedHashMap<>();
+    private volatile Map<String, Map<NamespacedKey, DataDefinition<?>>> definitionsByPlugin = Map.of();
 
     /**
      * Registers additional data to be stored in the PlayerData class, with a default value.
@@ -36,12 +37,16 @@ public final class PlayerDataRegistry implements PlayerDataRegistryService {
         if (isFrozen) {
             throw new UnsupportedOperationException("The player data registry is frozen and cannot be modified.");
         }
-        if (!type.getTypeClass().isInstance(defaultValue)) {
+        Objects.requireNonNull(namespacedKey, "Player data key cannot be null");
+        Objects.requireNonNull(type, "Player data type cannot be null for " + namespacedKey);
+        if (defaultValue == null ? !isNullable(type) : !type.getTypeClass().isInstance(defaultValue)) {
             throw new IllegalArgumentException("The default value for player data " + namespacedKey +
                     " does not match the type " + type + "!");
         }
         DataDefinition<V> definition = new DataDefinition<>(type, defaultValue, persistent);
-        playerDataRegistry.put(namespacedKey, definition);
+        if (playerDataRegistry.putIfAbsent(namespacedKey, definition) != null) {
+            throw new IllegalArgumentException("Duplicate player data key registered: " + namespacedKey);
+        }
         CrescentCore.getInstance().getLogger().info("Player data definition registered: " + namespacedKey);
     }
 
@@ -52,10 +57,35 @@ public final class PlayerDataRegistry implements PlayerDataRegistryService {
      */
     @Override
     public Map<NamespacedKey, DataDefinition<?>> getRegistry() {
-        return Collections.unmodifiableMap(playerDataRegistry);
+        return isFrozen ? playerDataRegistry : Collections.unmodifiableMap(playerDataRegistry);
     }
 
     public void freezeRegistry() {
+        Map<String, Map<String, NamespacedKey>> columnsByPlugin = new HashMap<>();
+        Map<String, Map<NamespacedKey, DataDefinition<?>>> groupedDefinitions = new LinkedHashMap<>();
+        for (Map.Entry<NamespacedKey, DataDefinition<?>> entry : playerDataRegistry.entrySet()) {
+            NamespacedKey key = entry.getKey();
+            String pluginName = key.namespace().toLowerCase(Locale.ROOT);
+            validateSqlIdentifier("player_data_" + pluginName, "player-data table", key.toString());
+            String columnName = key.getKey().toLowerCase(Locale.ROOT);
+            validateSqlIdentifier(columnName, "player-data column", key.toString());
+
+            NamespacedKey previous = columnsByPlugin
+                    .computeIfAbsent(pluginName, ignored -> new HashMap<>())
+                    .putIfAbsent(columnName, key);
+            if (previous != null) {
+                throw new IllegalStateException("Player data keys " + previous + " and " + key
+                        + " produce the same database column '" + columnName + "' in plugin '" + pluginName + "'.");
+            }
+            groupedDefinitions.computeIfAbsent(pluginName, ignored -> new LinkedHashMap<>())
+                    .put(key, entry.getValue());
+        }
+
+        Map<String, Map<NamespacedKey, DataDefinition<?>>> immutableGroups = new LinkedHashMap<>();
+        groupedDefinitions.forEach((plugin, definitions) -> immutableGroups.put(
+                plugin, Collections.unmodifiableMap(new LinkedHashMap<>(definitions))));
+        definitionsByPlugin = Collections.unmodifiableMap(immutableGroups);
+        playerDataRegistry = Collections.unmodifiableMap(new LinkedHashMap<>(playerDataRegistry));
         isFrozen = true;
         CrescentCore.getInstance().getLogger().info("Player Data Registry frozen! " +
                 "No more player data can be registered.");
@@ -63,6 +93,9 @@ public final class PlayerDataRegistry implements PlayerDataRegistryService {
 
     @Override
     public Map<NamespacedKey, DataDefinition<?>> getPlayerDataDefinitionsForPlugin(String plugin) {
+        if (isFrozen) {
+            return definitionsByPlugin.getOrDefault(plugin.toLowerCase(Locale.ROOT), Map.of());
+        }
         Map<NamespacedKey, DataDefinition<?>> data = new HashMap<>();
         for (NamespacedKey namespacedKey : playerDataRegistry.keySet()) {
             if (namespacedKey.namespace().equalsIgnoreCase(plugin)) {
@@ -81,13 +114,28 @@ public final class PlayerDataRegistry implements PlayerDataRegistryService {
      * @return a list of all the plugin names that have registered player data.
      */
     public List<String> getRegisteredPluginNames() {
-        List<String> pluginNames = new ArrayList<>();
-        for (NamespacedKey key : playerDataRegistry.keySet()) {
-            if (!pluginNames.contains(key.namespace())) {
+        Set<String> pluginNames = new LinkedHashSet<>();
+        if (isFrozen) {
+            pluginNames.addAll(definitionsByPlugin.keySet());
+        } else {
+            for (NamespacedKey key : playerDataRegistry.keySet()) {
                 pluginNames.add(key.namespace());
             }
         }
-        return pluginNames;
+        return List.copyOf(pluginNames);
+    }
+
+    private static boolean isNullable(DataType type) {
+        return type == DataType.NULLABLE_VARCHAR_16
+                || type == DataType.NULLABLE_VARCHAR_36
+                || type == DataType.NULLABLE_VARCHAR_255;
+    }
+
+    private static void validateSqlIdentifier(String identifier, String kind, String owner) {
+        if (identifier.length() > 64 || !identifier.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
+            throw new IllegalStateException("Invalid " + kind + " '" + identifier + "' registered by " + owner
+                    + ". Database identifiers must match [A-Za-z_][A-Za-z0-9_]* and be at most 64 characters.");
+        }
     }
 
 }
